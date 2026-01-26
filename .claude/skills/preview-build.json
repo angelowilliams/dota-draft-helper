@@ -1,0 +1,11 @@
+{
+  "name": "preview-build",
+  "description": "Preview the production build locally",
+  "instructions": "Serves the production build from the dist/ directory for testing before deployment.\n\nPrerequisites:\n- Production build must exist (run 'npm run build' first)\n\nThe preview server:\n- Runs at http://localhost:4173\n- Serves optimized production files\n- Simulates production environment\n- Does NOT include hot reload (unlike dev server)\n\nUse this to:\n- Test production build performance\n- Verify bundle optimization\n- Check for production-only bugs\n- Validate asset loading\n\nPress Ctrl+C to stop the server.",
+  "actions": [
+    {
+      "type": "bash",
+      "command": "npm run preview"
+    }
+  ]
+}

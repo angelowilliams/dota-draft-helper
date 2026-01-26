@@ -1,0 +1,11 @@
+{
+  "name": "lint-check",
+  "description": "Run ESLint to check code quality",
+  "instructions": "Runs ESLint to check for code quality issues, potential bugs, and style violations.\n\nWhat it checks:\n- TypeScript type safety\n- React best practices and hooks rules\n- Unused variables and imports\n- Code style consistency\n\nOutput:\n- Lists all warnings and errors\n- Shows file locations and line numbers\n- Suggests fixes where applicable\n\nTo auto-fix issues:\n- Run: npm run lint -- --fix\n\nCommon issues:\n- Unused imports (safe to remove)\n- Missing dependencies in useEffect/useMemo\n- React key props on list items",
+  "actions": [
+    {
+      "type": "bash",
+      "command": "npm run lint"
+    }
+  ]
+}

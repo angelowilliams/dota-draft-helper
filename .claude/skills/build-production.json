@@ -1,0 +1,11 @@
+{
+  "name": "build-production",
+  "description": "Build optimized production bundle",
+  "instructions": "Creates an optimized production build of the application in the dist/ directory.\n\nThe build process:\n1. Runs TypeScript type checking\n2. Bundles and minifies JavaScript/CSS\n3. Optimizes assets and images\n4. Generates source maps\n\nOutput:\n- dist/ directory with all static files\n- Optimized for performance and small bundle size\n\nTo test the production build:\n1. Run: npm run preview\n2. Open http://localhost:4173\n\nTo deploy:\n- Serve the dist/ directory with any static file server\n- Or use: npx serve dist",
+  "actions": [
+    {
+      "type": "bash",
+      "command": "npm run build"
+    }
+  ]
+}

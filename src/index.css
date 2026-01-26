@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-dota-bg-tertiary;
+  }
+
+  body {
+    @apply bg-dota-bg-primary text-dota-text-primary;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-dota-bg-tertiary text-dota-text-primary rounded hover:bg-dota-bg-secondary transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-dota-bg-tertiary/50 text-dota-text-secondary rounded border border-dota-bg-tertiary hover:bg-dota-bg-tertiary hover:text-dota-text-primary transition-colors;
+  }
+
+  .btn-radiant {
+    @apply px-4 py-2 bg-radiant text-white rounded hover:bg-radiant-light transition-colors;
+  }
+
+  .btn-dire {
+    @apply px-4 py-2 bg-dire text-white rounded hover:bg-dire-light transition-colors;
+  }
+
+  .input-field {
+    @apply px-3 py-2 bg-dota-bg-tertiary text-dota-text-primary rounded border border-dota-bg-tertiary focus:border-dota-text-secondary focus:outline-none;
+  }
+
+  .card {
+    @apply bg-dota-bg-secondary rounded-lg p-4 border border-dota-bg-tertiary;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #374151 #1a1f2e;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #1a1f2e;
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+  }
+}

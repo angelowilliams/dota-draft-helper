@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(test:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 npm run dev:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
