@@ -20,6 +20,8 @@ function App() {
   const [draftState, setDraftState] = useState<Map<number, number>>(new Map());
   const [draftSelectedCell, setDraftSelectedCell] = useState<number | null>(null);
   const [draftSearchQuery, setDraftSearchQuery] = useState('');
+  const [draftFirstPickSearchQuery, setDraftFirstPickSearchQuery] = useState('');
+  const [draftSecondPickSearchQuery, setDraftSecondPickSearchQuery] = useState('');
   const [draftLobbyTypeFilter, setDraftLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
 
   return (
@@ -111,12 +113,16 @@ function App() {
               draftState={draftState}
               selectedCell={draftSelectedCell}
               searchQuery={draftSearchQuery}
+              firstPickSearchQuery={draftFirstPickSearchQuery}
+              secondPickSearchQuery={draftSecondPickSearchQuery}
               lobbyTypeFilter={draftLobbyTypeFilter}
               onFirstPickTeamChange={setDraftFirstPickTeamId}
               onSecondPickTeamChange={setDraftSecondPickTeamId}
               onDraftStateChange={setDraftState}
               onSelectedCellChange={setDraftSelectedCell}
               onSearchQueryChange={setDraftSearchQuery}
+              onFirstPickSearchQueryChange={setDraftFirstPickSearchQuery}
+              onSecondPickSearchQueryChange={setDraftSecondPickSearchQuery}
               onLobbyTypeFilterChange={setDraftLobbyTypeFilter}
             />
           )}

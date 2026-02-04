@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import { useTeams } from '@/hooks/useTeams';
 import { useHeroes } from '@/hooks/useHeroes';
 import { usePlayerData } from '@/hooks/usePlayerData';
@@ -16,6 +16,7 @@ interface PlayerHeroListWithHighlightProps {
   pickedByThisTeam: Set<number>;
   pickedByOpponent: Set<number>;
   manualHeroList?: number[]; // Ordered list of hero IDs for manual lists
+  searchFilter?: string;
 }
 
 function PlayerHeroListWithHighlight({
@@ -27,15 +28,18 @@ function PlayerHeroListWithHighlight({
   pickedByThisTeam,
   pickedByOpponent,
   manualHeroList,
+  searchFilter = '',
 }: PlayerHeroListWithHighlightProps) {
   const sortedHeroes = useMemo(() => {
     if (!heroes || !Array.isArray(heroes)) {
       return [];
     }
 
+    let items;
+
     // If manual hero list is provided, use that order
     if (manualHeroList && Array.isArray(manualHeroList) && manualHeroList.length > 0) {
-      return manualHeroList
+      items = manualHeroList
         .map((heroId) => {
           const hero = heroes.find((h) => h.id === heroId);
           if (!hero) return null;
@@ -58,31 +62,42 @@ function PlayerHeroListWithHighlight({
           };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null);
+    } else {
+      // Otherwise, use parsed hero stats
+      if (!heroStats || !Array.isArray(heroStats)) {
+        return [];
+      }
+
+      items = heroStats
+        .map((stat) => {
+          if (!stat || typeof stat.heroId !== 'number') {
+            return null;
+          }
+
+          const hero = heroes.find((h) => h.id === stat.heroId);
+          if (!hero) return null;
+
+          return {
+            hero,
+            stat,
+            totalGames: stat.pubGames + stat.competitiveGames,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .sort((a, b) => b.totalGames - a.totalGames);
     }
 
-    // Otherwise, use parsed hero stats
-    if (!heroStats || !Array.isArray(heroStats)) {
-      return [];
+    // Apply search filter if provided
+    if (searchFilter && searchFilter.trim().length > 0) {
+      const lowerSearch = searchFilter.toLowerCase();
+      items = items.filter((item) =>
+        item.hero.displayName.toLowerCase().startsWith(lowerSearch) ||
+        item.hero.name.toLowerCase().startsWith(lowerSearch)
+      );
     }
 
-    return heroStats
-      .map((stat) => {
-        if (!stat || typeof stat.heroId !== 'number') {
-          return null;
-        }
-
-        const hero = heroes.find((h) => h.id === stat.heroId);
-        if (!hero) return null;
-
-        return {
-          hero,
-          stat,
-          totalGames: stat.pubGames + stat.competitiveGames,
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((a, b) => b.totalGames - a.totalGames);
-  }, [heroStats, heroes, manualHeroList, steamId]);
+    return items;
+  }, [heroStats, heroes, manualHeroList, steamId, searchFilter]);
 
   return (
     <div className="card">
@@ -179,12 +194,16 @@ interface DraftAssistantViewProps {
   draftState: Map<number, number>;
   selectedCell: number | null;
   searchQuery: string;
+  firstPickSearchQuery: string;
+  secondPickSearchQuery: string;
   lobbyTypeFilter: LobbyTypeFilter;
   onFirstPickTeamChange: (id: string) => void;
   onSecondPickTeamChange: (id: string) => void;
   onDraftStateChange: (state: Map<number, number>) => void;
   onSelectedCellChange: (cell: number | null) => void;
   onSearchQueryChange: (query: string) => void;
+  onFirstPickSearchQueryChange: (query: string) => void;
+  onSecondPickSearchQueryChange: (query: string) => void;
   onLobbyTypeFilterChange: (filter: LobbyTypeFilter) => void;
 }
 
@@ -194,12 +213,16 @@ export function DraftAssistantView({
   draftState,
   selectedCell,
   searchQuery,
+  firstPickSearchQuery,
+  secondPickSearchQuery,
   lobbyTypeFilter,
   onFirstPickTeamChange,
   onSecondPickTeamChange,
   onDraftStateChange,
   onSelectedCellChange,
   onSearchQueryChange,
+  onFirstPickSearchQueryChange,
+  onSecondPickSearchQueryChange,
   onLobbyTypeFilterChange,
 }: DraftAssistantViewProps) {
   const { teams: allTeams } = useTeams();
@@ -563,9 +586,21 @@ export function DraftAssistantView({
           <>
             {/* Second Pick Team Stats (Opponent) */}
             <div className="card">
-              <h3 className="text-lg font-semibold mb-4">
-                {secondPickTeam?.name} Player Stats
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {secondPickTeam?.name} Player Stats
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Search size={16} className="text-dota-text-muted" />
+                  <input
+                    type="text"
+                    value={secondPickSearchQuery}
+                    onChange={(e) => onSecondPickSearchQueryChange(e.target.value)}
+                    placeholder="Filter heroes..."
+                    className="input-field w-48"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-5 gap-4">
                 {secondPickTeam?.playerIds.map((steamId, idx) => {
                   const stats = secondPickPlayerData.heroStatsMap.get(steamId) || [];
@@ -582,6 +617,7 @@ export function DraftAssistantView({
                       pickedByThisTeam={secondPickPickedHeroIds}
                       pickedByOpponent={firstPickPickedHeroIds}
                       manualHeroList={manualList}
+                      searchFilter={secondPickSearchQuery}
                     />
                   );
                 })}
@@ -590,10 +626,22 @@ export function DraftAssistantView({
 
             {/* First Pick Team Stats (Your Team) */}
             <div className="card">
-              <h3 className="text-lg font-semibold mb-4">
-                {firstPickTeam?.name} Player Stats
-                <span className="text-sm text-radiant ml-2">(Your Team - Manual List)</span>
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {firstPickTeam?.name} Player Stats
+                  <span className="text-sm text-radiant ml-2">(Your Team - Manual List)</span>
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Search size={16} className="text-dota-text-muted" />
+                  <input
+                    type="text"
+                    value={firstPickSearchQuery}
+                    onChange={(e) => onFirstPickSearchQueryChange(e.target.value)}
+                    placeholder="Filter heroes..."
+                    className="input-field w-48"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-5 gap-4">
                 {firstPickTeam?.playerIds.map((steamId, idx) => {
                   const stats = firstPickPlayerData.heroStatsMap.get(steamId) || [];
@@ -610,6 +658,7 @@ export function DraftAssistantView({
                       pickedByThisTeam={firstPickPickedHeroIds}
                       pickedByOpponent={secondPickPickedHeroIds}
                       manualHeroList={manualList}
+                      searchFilter={firstPickSearchQuery}
                     />
                   );
                 })}
@@ -620,9 +669,21 @@ export function DraftAssistantView({
           <>
             {/* First Pick Team Stats */}
             <div className="card">
-              <h3 className="text-lg font-semibold mb-4">
-                {firstPickTeam?.name} Player Stats
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {firstPickTeam?.name} Player Stats
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Search size={16} className="text-dota-text-muted" />
+                  <input
+                    type="text"
+                    value={firstPickSearchQuery}
+                    onChange={(e) => onFirstPickSearchQueryChange(e.target.value)}
+                    placeholder="Filter heroes..."
+                    className="input-field w-48"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-5 gap-4">
                 {firstPickTeam?.playerIds.map((steamId, idx) => {
                   const stats = firstPickPlayerData.heroStatsMap.get(steamId) || [];
@@ -639,6 +700,7 @@ export function DraftAssistantView({
                       pickedByThisTeam={firstPickPickedHeroIds}
                       pickedByOpponent={secondPickPickedHeroIds}
                       manualHeroList={manualList}
+                      searchFilter={firstPickSearchQuery}
                     />
                   );
                 })}
@@ -647,12 +709,24 @@ export function DraftAssistantView({
 
             {/* Second Pick Team Stats */}
             <div className="card">
-              <h3 className="text-lg font-semibold mb-4">
-                {secondPickTeam?.name} Player Stats
-                {secondPickTeam?.yourTeam && (
-                  <span className="text-sm text-radiant ml-2">(Your Team - Manual List)</span>
-                )}
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {secondPickTeam?.name} Player Stats
+                  {secondPickTeam?.yourTeam && (
+                    <span className="text-sm text-radiant ml-2">(Your Team - Manual List)</span>
+                  )}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Search size={16} className="text-dota-text-muted" />
+                  <input
+                    type="text"
+                    value={secondPickSearchQuery}
+                    onChange={(e) => onSecondPickSearchQueryChange(e.target.value)}
+                    placeholder="Filter heroes..."
+                    className="input-field w-48"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-5 gap-4">
                 {secondPickTeam?.playerIds.map((steamId, idx) => {
                   const stats = secondPickPlayerData.heroStatsMap.get(steamId) || [];
@@ -669,6 +743,7 @@ export function DraftAssistantView({
                       pickedByThisTeam={secondPickPickedHeroIds}
                       pickedByOpponent={firstPickPickedHeroIds}
                       manualHeroList={manualList}
+                      searchFilter={secondPickSearchQuery}
                     />
                   );
                 })}
