@@ -1,8 +1,9 @@
 import { getStratzClient, normalizeToSteam32 } from './stratz';
-import type { StratzPlayer, HeroStats } from '@/types';
+import type { StratzPlayer, HeroStats, LobbyTypeFilter } from '@/types';
 
 interface FetchPlayerHeroesParams {
   steamId: string;
+  lobbyTypeFilter?: LobbyTypeFilter;
 }
 
 export async function fetchPlayerHeroes(
@@ -10,9 +11,21 @@ export async function fetchPlayerHeroes(
 ): Promise<{ player: StratzPlayer; heroStats: HeroStats[] }> {
   const client = getStratzClient();
   const steam32Id = normalizeToSteam32(params.steamId);
+  const lobbyTypeFilter = params.lobbyTypeFilter || 'all';
+
+  // Build match request based on filter
+  const matchRequest: any = {
+    gameModeIds: [1, 2, 3, 4, 5, 10, 16, 22],
+    take: 100,
+  };
+
+  // If competitive only, filter by lobby type 1 (tournament/league)
+  if (lobbyTypeFilter === 'competitive') {
+    matchRequest.lobbyTypeIds = [1];
+  }
 
   const query = `
-    query GetPlayerHeroes($steamId: Long!) {
+    query GetPlayerHeroes($steamId: Long!, $matchRequest: PlayerMatchesRequestType!) {
       player(steamAccountId: $steamId) {
         steamAccount {
           id
@@ -22,12 +35,7 @@ export async function fetchPlayerHeroes(
             name
           }
         }
-        matches(
-          request: {
-            gameModeIds: [1, 2, 3, 4, 5, 10, 16, 22]
-            take: 100
-          }
-        ) {
+        matches(request: $matchRequest) {
           id
           didRadiantWin
           gameMode
@@ -45,6 +53,7 @@ export async function fetchPlayerHeroes(
   try {
     const data: any = await client.request(query, {
       steamId: steam32Id,
+      matchRequest,
     });
 
     if (!data || !data.player) {
@@ -114,6 +123,7 @@ export async function fetchPlayerHeroes(
       .map(([heroId, stats]) => ({
         steamId: params.steamId,
         heroId,
+        lobbyTypeFilter,
         pubGames: stats.pubGames,
         competitiveGames: stats.compGames,
         wins: stats.wins,

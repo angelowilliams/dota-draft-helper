@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useTeams } from '@/hooks/useTeams';
 import { useHeroes } from '@/hooks/useHeroes';
 import { usePlayerData } from '@/hooks/usePlayerData';
 import { CAPTAIN_MODE_DRAFT_ORDER } from '@/config/draftOrder';
 import { getHeroPortraitUrl } from '@/config/heroes';
-import type { Team, Hero, HeroStats, Player } from '@/types';
+import type { Hero, HeroStats, Player, LobbyTypeFilter } from '@/types';
 
 interface PlayerHeroListWithHighlightProps {
   steamId: string;
@@ -48,8 +48,11 @@ function PlayerHeroListWithHighlight({
             stat: stat || {
               steamId,
               heroId,
+              lobbyTypeFilter: 'all' as const,
               pubGames: 0,
               competitiveGames: 0,
+              wins: 0,
+              avgImp: 0,
             },
             totalGames: stat ? stat.pubGames + stat.competitiveGames : 0,
           };
@@ -176,11 +179,13 @@ interface DraftAssistantViewProps {
   draftState: Map<number, number>;
   selectedCell: number | null;
   searchQuery: string;
+  lobbyTypeFilter: LobbyTypeFilter;
   onFirstPickTeamChange: (id: string) => void;
   onSecondPickTeamChange: (id: string) => void;
   onDraftStateChange: (state: Map<number, number>) => void;
   onSelectedCellChange: (cell: number | null) => void;
   onSearchQueryChange: (query: string) => void;
+  onLobbyTypeFilterChange: (filter: LobbyTypeFilter) => void;
 }
 
 export function DraftAssistantView({
@@ -189,11 +194,13 @@ export function DraftAssistantView({
   draftState,
   selectedCell,
   searchQuery,
+  lobbyTypeFilter,
   onFirstPickTeamChange,
   onSecondPickTeamChange,
   onDraftStateChange,
   onSelectedCellChange,
   onSearchQueryChange,
+  onLobbyTypeFilterChange,
 }: DraftAssistantViewProps) {
   const { teams: allTeams } = useTeams();
   const { heroes } = useHeroes();
@@ -214,11 +221,13 @@ export function DraftAssistantView({
   const firstPickPlayerData = usePlayerData({
     steamIds: firstPickTeam?.playerIds || [],
     autoFetch: false,
+    lobbyTypeFilter,
   });
 
   const secondPickPlayerData = usePlayerData({
     steamIds: secondPickTeam?.playerIds || [],
     autoFetch: false,
+    lobbyTypeFilter,
   });
 
   const selectedHeroIds = new Set(Array.from(draftState.values()));
@@ -309,6 +318,34 @@ export function DraftAssistantView({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Game Type Filter
+              </label>
+              <div className="inline-flex rounded-lg border-2 border-dota-bg-tertiary bg-dota-bg-primary overflow-hidden">
+                <button
+                  onClick={() => onLobbyTypeFilterChange('all')}
+                  className={`px-6 py-2 text-sm font-semibold transition-all ${
+                    lobbyTypeFilter === 'all'
+                      ? 'bg-radiant text-black shadow-lg'
+                      : 'bg-transparent text-dota-text-secondary hover:text-dota-text-primary hover:bg-dota-bg-tertiary'
+                  }`}
+                >
+                  All Games
+                </button>
+                <button
+                  onClick={() => onLobbyTypeFilterChange('competitive')}
+                  className={`px-6 py-2 text-sm font-semibold transition-all border-l-2 border-dota-bg-tertiary ${
+                    lobbyTypeFilter === 'competitive'
+                      ? 'bg-radiant text-black shadow-lg'
+                      : 'bg-transparent text-dota-text-secondary hover:text-dota-bg-tertiary hover:text-dota-text-primary'
+                  }`}
+                >
+                  Competitive
+                </button>
+              </div>
             </div>
 
             {firstPickTeamId && secondPickTeamId && (

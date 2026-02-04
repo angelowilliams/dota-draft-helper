@@ -1,5 +1,5 @@
 import { db } from './database';
-import type { Player, HeroStats } from '../types';
+import type { Player, HeroStats, LobbyTypeFilter } from '../types';
 
 export async function savePlayer(player: Player): Promise<void> {
   await db.players.put({
@@ -25,15 +25,24 @@ export async function saveHeroStats(stats: HeroStats[]): Promise<void> {
   await db.heroStats.bulkPut(stats);
 }
 
-export async function getHeroStats(steamId: string): Promise<HeroStats[]> {
-  return db.heroStats.where('steamId').equals(steamId).toArray();
+export async function getHeroStats(
+  steamId: string,
+  lobbyTypeFilter: LobbyTypeFilter = 'all'
+): Promise<HeroStats[]> {
+  return db.heroStats
+    .where('[steamId+lobbyTypeFilter]')
+    .equals([steamId, lobbyTypeFilter])
+    .toArray();
 }
 
-export async function getMultipleHeroStats(steamIds: string[]): Promise<Map<string, HeroStats[]>> {
+export async function getMultipleHeroStats(
+  steamIds: string[],
+  lobbyTypeFilter: LobbyTypeFilter = 'all'
+): Promise<Map<string, HeroStats[]>> {
   const results = new Map<string, HeroStats[]>();
 
   for (const steamId of steamIds) {
-    const stats = await getHeroStats(steamId);
+    const stats = await getHeroStats(steamId, lobbyTypeFilter);
     results.set(steamId, stats);
   }
 
@@ -45,8 +54,20 @@ export async function deletePlayerData(steamId: string): Promise<void> {
   await db.heroStats.where('steamId').equals(steamId).delete();
 }
 
-export async function clearAllHeroStats(steamIds: string[]): Promise<void> {
+export async function clearAllHeroStats(
+  steamIds: string[],
+  lobbyTypeFilter?: LobbyTypeFilter
+): Promise<void> {
   for (const steamId of steamIds) {
-    await db.heroStats.where('steamId').equals(steamId).delete();
+    if (lobbyTypeFilter) {
+      // Clear only stats for specific filter
+      await db.heroStats
+        .where('[steamId+lobbyTypeFilter]')
+        .equals([steamId, lobbyTypeFilter])
+        .delete();
+    } else {
+      // Clear all stats for this player (all filters)
+      await db.heroStats.where('steamId').equals(steamId).delete();
+    }
   }
 }

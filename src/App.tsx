@@ -6,7 +6,7 @@ import { ScoutingView } from './components/ScoutingView';
 import { TeamManagementView } from './components/TeamManagementView';
 import { DraftAssistantView } from './components/DraftAssistantView';
 import { DataManagementView } from './components/DataManagementView';
-import type { Team } from './types';
+import type { Team, LobbyTypeFilter } from './types';
 
 function App() {
   const [view, setView] = useState<'yourTeam' | 'teams' | 'scouting' | 'draft' | 'data'>('yourTeam');
@@ -20,6 +20,7 @@ function App() {
   const [draftState, setDraftState] = useState<Map<number, number>>(new Map());
   const [draftSelectedCell, setDraftSelectedCell] = useState<number | null>(null);
   const [draftSearchQuery, setDraftSearchQuery] = useState('');
+  const [draftLobbyTypeFilter, setDraftLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
 
   return (
     <div className="min-h-screen bg-dota-bg-primary">
@@ -110,11 +111,13 @@ function App() {
               draftState={draftState}
               selectedCell={draftSelectedCell}
               searchQuery={draftSearchQuery}
+              lobbyTypeFilter={draftLobbyTypeFilter}
               onFirstPickTeamChange={setDraftFirstPickTeamId}
               onSecondPickTeamChange={setDraftSecondPickTeamId}
               onDraftStateChange={setDraftState}
               onSelectedCellChange={setDraftSelectedCell}
               onSearchQueryChange={setDraftSearchQuery}
+              onLobbyTypeFilterChange={setDraftLobbyTypeFilter}
             />
           )}
           {view === 'data' && <DataManagementView />}

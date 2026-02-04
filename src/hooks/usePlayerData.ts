@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getMultipleHeroStats, saveHeroStats, clearAllHeroStats, savePlayers, getPlayer } from '@/db/players';
 import { fetchPlayerHeroes } from '@/api/players';
-import type { HeroStats, Player } from '@/types';
+import type { HeroStats, Player, LobbyTypeFilter } from '@/types';
 
 interface UsePlayerDataParams {
   steamIds: string[];
   autoFetch?: boolean;
+  lobbyTypeFilter?: LobbyTypeFilter;
 }
 
 interface UsePlayerDataResult {
@@ -20,6 +21,7 @@ interface UsePlayerDataResult {
 export function usePlayerData({
   steamIds,
   autoFetch = false,
+  lobbyTypeFilter = 'all',
 }: UsePlayerDataParams): UsePlayerDataResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +29,8 @@ export function usePlayerData({
   // Load cached data from IndexedDB
   const cachedStats = useLiveQuery(async () => {
     if (steamIds.length === 0) return new Map();
-    return await getMultipleHeroStats(steamIds);
-  }, [steamIds]);
+    return await getMultipleHeroStats(steamIds, lobbyTypeFilter);
+  }, [steamIds, lobbyTypeFilter]);
 
   const cachedPlayers = useLiveQuery(async () => {
     if (steamIds.length === 0) return new Map();
@@ -52,8 +54,8 @@ export function usePlayerData({
     setError(null);
 
     try {
-      // Clear existing stats for these players
-      await clearAllHeroStats(steamIds);
+      // Clear existing stats for these players with current filter
+      await clearAllHeroStats(steamIds, lobbyTypeFilter);
 
       // Fetch new data from STRATZ (now includes player info)
       const results = await Promise.all(
@@ -66,6 +68,7 @@ export function usePlayerData({
 
             const { player, heroStats } = await fetchPlayerHeroes({
               steamId,
+              lobbyTypeFilter,
             });
             return { steamId, player, heroStats };
           } catch (error) {
@@ -119,7 +122,7 @@ export function usePlayerData({
     if (autoFetch && cachedStats && cachedStats.size === 0 && steamIds.length > 0) {
       refetch();
     }
-  }, [autoFetch, steamIds.length]);
+  }, [autoFetch, steamIds.length, lobbyTypeFilter]);
 
   return {
     heroStatsMap: cachedStats || new Map(),

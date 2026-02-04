@@ -4,7 +4,7 @@ import { PlayerHeroList } from './PlayerHeroList';
 import { MatchHistory } from './MatchHistory';
 import { usePlayerData } from '@/hooks/usePlayerData';
 import { useHeroes } from '@/hooks/useHeroes';
-import type { Team } from '@/types';
+import type { Team, LobbyTypeFilter } from '@/types';
 
 interface PlayerScoutingViewProps {
   team: Team;
@@ -13,6 +13,7 @@ interface PlayerScoutingViewProps {
 
 export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
   const [searchFilter, setSearchFilter] = useState('');
+  const [lobbyTypeFilter, setLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
 
   // Validate team data
   if (!team || !team.playerIds || team.playerIds.length === 0) {
@@ -28,6 +29,7 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
 
   const { heroStatsMap, players, loading, error, refetch } = usePlayerData({
     steamIds: team.playerIds,
+    lobbyTypeFilter,
   });
 
   const { heroes, loading: heroesLoading } = useHeroes();
@@ -63,15 +65,46 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Info */}
           <div>
             <p className="text-sm text-dota-text-secondary">
               Showing statistics from past 100 games per player
             </p>
             <p className="text-xs text-dota-text-muted mt-1">
-              Includes ranked, unranked, and competitive matches (excludes Turbo mode)
+              {lobbyTypeFilter === 'competitive'
+                ? 'Competitive matches only (tournament/league)'
+                : 'Includes ranked, unranked, and competitive matches (excludes Turbo mode)'}
             </p>
+          </div>
+
+          {/* Lobby Type Filter */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Game Type Filter
+            </label>
+            <div className="inline-flex rounded-lg border-2 border-dota-bg-tertiary bg-dota-bg-primary overflow-hidden">
+              <button
+                onClick={() => setLobbyTypeFilter('all')}
+                className={`px-6 py-2 text-sm font-semibold transition-all ${
+                  lobbyTypeFilter === 'all'
+                    ? 'bg-radiant text-black shadow-lg'
+                    : 'bg-transparent text-dota-text-secondary hover:text-dota-text-primary hover:bg-dota-bg-tertiary'
+                }`}
+              >
+                All Games
+              </button>
+              <button
+                onClick={() => setLobbyTypeFilter('competitive')}
+                className={`px-6 py-2 text-sm font-semibold transition-all border-l-2 border-dota-bg-tertiary ${
+                  lobbyTypeFilter === 'competitive'
+                    ? 'bg-radiant text-black shadow-lg'
+                    : 'bg-transparent text-dota-text-secondary hover:text-dota-text-primary hover:bg-dota-bg-tertiary'
+                }`}
+              >
+                Competitive
+              </button>
+            </div>
           </div>
 
           {/* Search Filter */}

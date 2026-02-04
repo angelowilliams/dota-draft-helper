@@ -4,7 +4,7 @@ import type { Team, Player, HeroStats, Match, Hero } from '../types';
 export class DotaDraftDatabase extends Dexie {
   teams!: Table<Team, string>;
   players!: Table<Player, string>;
-  heroStats!: Table<HeroStats, [string, number]>;
+  heroStats!: Table<HeroStats, [string, number, string]>;
   matches!: Table<Match, string>;
   heroes!: Table<Hero, number>;
 
@@ -23,6 +23,25 @@ export class DotaDraftDatabase extends Dexie {
       teams: 'id, name, *playerIds, teamId, yourTeam, createdAt',
       players: 'steamId, name, lastUpdated',
       heroStats: '[steamId+heroId], steamId, heroId, lastPlayed',
+      matches: 'matchId, teamId, startDateTime, leagueId',
+      heroes: 'id, name, displayName, shortName',
+    });
+
+    // Version 3: Delete heroStats table (set to null)
+    this.version(3).stores({
+      teams: 'id, name, *playerIds, teamId, yourTeam, createdAt',
+      players: 'steamId, name, lastUpdated',
+      heroStats: null, // Delete the table
+      matches: 'matchId, teamId, startDateTime, leagueId',
+      heroes: 'id, name, displayName, shortName',
+    });
+
+    // Version 4: Recreate heroStats with new primary key structure
+    // Add compound index for [steamId+lobbyTypeFilter] for efficient filtering
+    this.version(4).stores({
+      teams: 'id, name, *playerIds, teamId, yourTeam, createdAt',
+      players: 'steamId, name, lastUpdated',
+      heroStats: '[steamId+heroId+lobbyTypeFilter], [steamId+lobbyTypeFilter], steamId, heroId, lobbyTypeFilter, lastPlayed',
       matches: 'matchId, teamId, startDateTime, leagueId',
       heroes: 'id, name, displayName, shortName',
     });

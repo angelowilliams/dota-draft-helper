@@ -19,9 +19,12 @@ export interface Player {
   lastUpdated?: Date;
 }
 
+export type LobbyTypeFilter = 'all' | 'competitive';
+
 export interface HeroStats {
   steamId: string;
   heroId: number;
+  lobbyTypeFilter: LobbyTypeFilter; // Which filter was used when fetching this data
   pubGames: number;
   competitiveGames: number;
   wins?: number;
