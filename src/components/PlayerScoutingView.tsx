@@ -273,6 +273,7 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
         <MatchHistory
           teamId={team.teamId}
           teamName={team.name}
+          playerIds={team.playerIds}
           heroes={heroes}
         />
       )}
