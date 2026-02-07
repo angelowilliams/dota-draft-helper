@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { getAllTeams, createTeam, updateTeam, deleteTeam } from '@/db/teams';
+import { getAllTeams, createTeam, updateTeam, deleteTeam, toggleFavorite } from '@/db/teams';
 import { fetchTeamInfo } from '@/api/teams';
 import toast from 'react-hot-toast';
 import type { Team } from '@/types';
@@ -76,5 +76,6 @@ export function useTeamOperations() {
     createTeam: handleCreate,
     updateTeam: handleUpdate,
     deleteTeam: handleDelete,
+    toggleFavorite,
   };
 }

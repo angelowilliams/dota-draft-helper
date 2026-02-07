@@ -28,7 +28,7 @@ interface ManualHeroManagerProps {
   team: Team;
   players?: Map<string, Player>;
   onClose?: () => void;
-  onUpdate: () => void;
+  onUpdate?: () => void;
   embedded?: boolean;
 }
 
@@ -289,7 +289,7 @@ export function ManualHeroManager({ team, players, onClose, onUpdate, embedded =
     try {
       await updateManualHeroLists(team.id, heroLists);
       toast.success('Hero lists saved successfully');
-      onUpdate();
+      onUpdate?.();
       if (onClose && !embedded) {
         onClose();
       }

@@ -48,6 +48,15 @@ export async function getMultiplePlayerMatches(
   return results;
 }
 
+export async function getLatestMatchTime(steamId: string): Promise<number | null> {
+  const matches = await db.playerMatches
+    .where('steamId')
+    .equals(steamId)
+    .toArray();
+  if (matches.length === 0) return null;
+  return Math.max(...matches.map(m => m.startDateTime));
+}
+
 export async function hasPlayerMatches(steamId: string): Promise<boolean> {
   const count = await db.playerMatches.where('steamId').equals(steamId).count();
   return count > 0;

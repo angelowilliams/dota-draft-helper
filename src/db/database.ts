@@ -65,6 +65,22 @@ export class DotaDraftDatabase extends Dexie {
       heroes: 'id, name, displayName, shortName',
       playerMatches: '[steamId+matchId], steamId, startDateTime, heroId, lobbyType',
     });
+
+    // Version 7: Replace yourTeam flag with favorite (multiple teams can be favorited)
+    this.version(7).stores({
+      teams: 'id, name, *playerIds, teamId, favorite, createdAt',
+      players: 'steamId, name, lastUpdated',
+      matches: 'matchId, teamId, startDateTime, leagueId',
+      heroes: 'id, name, displayName, shortName',
+      playerMatches: '[steamId+matchId], steamId, startDateTime, heroId, lobbyType',
+    }).upgrade(tx => {
+      return tx.table('teams').toCollection().modify(team => {
+        if (team.yourTeam) {
+          team.favorite = 1;
+        }
+        delete team.yourTeam;
+      });
+    });
   }
 }
 

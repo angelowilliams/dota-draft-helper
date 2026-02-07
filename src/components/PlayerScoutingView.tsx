@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { RefreshCw, Search } from 'lucide-react';
+import { useState, useEffect, useCallback, type MutableRefObject } from 'react';
+import { Search } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -29,12 +29,20 @@ const TIME_WINDOW_OPTIONS: { value: TimeWindowFilter; label: string }[] = [
   { value: 'year', label: 'Last Year' },
 ];
 
-interface PlayerScoutingViewProps {
-  team: Team;
-  onBack: () => void;
+export interface PlayerScoutingControls {
+  refresh: () => void;
+  loading: boolean;
+  loadingProgress: { current: number; total: number; currentPlayer: string | null } | null;
+  lastFetched: Date | null;
 }
 
-export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
+interface PlayerScoutingViewProps {
+  team: Team;
+  controlsRef?: MutableRefObject<PlayerScoutingControls>;
+  onControlsChange?: () => void;
+}
+
+export function PlayerScoutingView({ team, controlsRef, onControlsChange }: PlayerScoutingViewProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [lobbyTypeFilter, setLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
   const [timeWindowFilter, setTimeWindowFilter] = useState<TimeWindowFilter>('threeMonths');
@@ -69,14 +77,11 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
     return (
       <div className="card bg-dire bg-opacity-20 border-dire">
         <p className="text-dire">Invalid team data. Please select a valid team.</p>
-        <button onClick={onBack} className="btn-primary mt-4">
-          Back to Teams
-        </button>
       </div>
     );
   }
 
-  const { heroStatsMap, players, loading, loadingProgress, error, refetch } = usePlayerData({
+  const { heroStatsMap, players, loading, loadingProgress, error, lastFetched, refetch } = usePlayerData({
     steamIds: team.playerIds,
     lobbyTypeFilter,
     timeWindowFilter,
@@ -84,39 +89,22 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
 
   const { heroes, loading: heroesLoading } = useHeroes();
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await refetch();
-  };
+  }, [refetch]);
+
+  // Expose controls to parent
+  useEffect(() => {
+    if (controlsRef) {
+      controlsRef.current = { refresh: handleRefresh, loading, loadingProgress, lastFetched };
+      onControlsChange?.();
+    }
+  }, [handleRefresh, controlsRef, onControlsChange, loading, loadingProgress, lastFetched]);
 
   const hasData = heroStatsMap.size > 0 && Array.from(heroStatsMap.values()).some(stats => stats.length > 0);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <button
-            onClick={onBack}
-            className="text-dota-text-secondary hover:text-dota-text-primary mb-2 text-sm"
-          >
-            ← Back to Team Selection
-          </button>
-          <h2 className="text-2xl font-bold">{team.name}</h2>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="btn-radiant flex items-center gap-2"
-        >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          {loading
-            ? loadingProgress
-              ? `Fetching player ${loadingProgress.current + 1}/${loadingProgress.total}...`
-              : 'Fetching...'
-            : 'Refresh Player Data'}
-        </button>
-      </div>
-
       {/* Filters */}
       <div className="card !p-6">
         <h3 className="text-sm font-semibold text-dota-text-secondary uppercase tracking-wider mb-4">

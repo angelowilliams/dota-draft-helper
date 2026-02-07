@@ -23,7 +23,9 @@ export async function opendotaFetch<T = any>(endpoint: string): Promise<T> {
     throw new Error(`OpenDota API error: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) throw new Error(`OpenDota returned empty body for ${endpoint}`);
+  return JSON.parse(text);
 }
 
 // Re-export Steam ID utilities

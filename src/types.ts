@@ -6,7 +6,7 @@ export interface Team {
   playerIds: string[]; // Array of 5 Steam IDs
   teamId?: string; // Optional team ID for competitive tracking
   teamLogo?: string; // Team logo URL
-  yourTeam?: number; // Flag for "Your Team" (1 = true, undefined = false)
+  favorite?: number; // 1 = favorite, undefined = not
   manualHeroLists?: number[][]; // 5 arrays of hero IDs, one per player (ordered)
   createdAt: Date;
   lastUpdated?: Date;

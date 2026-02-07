@@ -28,48 +28,39 @@ export async function getTeam(id: string): Promise<Team | undefined> {
 }
 
 export async function getAllTeams(): Promise<Team[]> {
-  return db.teams.orderBy('createdAt').reverse().toArray();
+  const teams = await db.teams.orderBy('createdAt').reverse().toArray();
+  return teams.sort((a, b) => {
+    if (a.favorite && !b.favorite) return -1;
+    if (!a.favorite && b.favorite) return 1;
+    return 0;
+  });
 }
 
 export async function getTeamByName(name: string): Promise<Team | undefined> {
   return db.teams.where('name').equals(name).first();
 }
 
-export async function getYourTeam(): Promise<Team | undefined> {
-  return db.teams.where('yourTeam').equals(1).first();
-}
+export async function toggleFavorite(id: string): Promise<void> {
+  const team = await db.teams.get(id);
+  if (!team) return;
 
-export async function getOtherTeams(): Promise<Team[]> {
-  return db.teams
-    .filter(team => !team.yourTeam)
-    .toArray()
-    .then(teams => teams.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
-}
+  const newFavorite = team.favorite ? undefined : 1;
 
-export async function setAsYourTeam(id: string): Promise<void> {
-  // First, unset any existing "Your Team"
-  const existingYourTeam = await getYourTeam();
-  if (existingYourTeam && existingYourTeam.id !== id) {
-    await db.teams.update(existingYourTeam.id, {
-      yourTeam: undefined,
-      manualHeroLists: undefined,
+  await db.transaction('rw', db.teams, async () => {
+    if (newFavorite) {
+      // Unfavorite all other teams first (limit to 1 favorite)
+      await db.teams.where('favorite').equals(1).modify({ favorite: undefined });
+    }
+    await db.teams.update(id, {
+      favorite: newFavorite,
+      lastUpdated: new Date(),
     });
-  }
-
-  // Set the new team as "Your Team" and initialize empty hero lists
-  await db.teams.update(id, {
-    yourTeam: 1,
-    manualHeroLists: [[], [], [], [], []],
-    lastUpdated: new Date(),
   });
 }
 
-export async function unsetYourTeam(id: string): Promise<void> {
-  await db.teams.update(id, {
-    yourTeam: undefined,
-    manualHeroLists: undefined,
-    lastUpdated: new Date(),
-  });
+export async function getFavoriteTeam(): Promise<Team | null> {
+  const team = await db.teams.where('favorite').equals(1).first();
+  return team ?? null;
 }
 
 export async function updateManualHeroLists(id: string, manualHeroLists: number[][]): Promise<void> {

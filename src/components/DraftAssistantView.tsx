@@ -184,8 +184,8 @@ export function DraftAssistantView() {
 
   const teams = useMemo(() => {
     return [...allTeams].sort((a, b) => {
-      if (a.yourTeam && !b.yourTeam) return -1;
-      if (!a.yourTeam && b.yourTeam) return 1;
+      if (a.favorite && !b.favorite) return -1;
+      if (!a.favorite && b.favorite) return 1;
       return 0;
     });
   }, [allTeams]);
@@ -245,7 +245,7 @@ export function DraftAssistantView() {
                 <option value="">Select a team...</option>
                 {teams.map(team => (
                   <option key={team.id} value={team.id} disabled={team.id === secondPickTeamId}>
-                    {team.yourTeam ? `${team.name} (Your Team)` : team.name}
+                    {team.name}
                   </option>
                 ))}
               </select>
@@ -263,7 +263,7 @@ export function DraftAssistantView() {
                 <option value="">Select a team...</option>
                 {teams.map(team => (
                   <option key={team.id} value={team.id} disabled={team.id === firstPickTeamId}>
-                    {team.yourTeam ? `${team.name} (Your Team)` : team.name}
+                    {team.name}
                   </option>
                 ))}
               </select>
@@ -462,151 +462,79 @@ export function DraftAssistantView() {
 
       {/* Scouting Views with Highlighting */}
       <div className="space-y-6">
-        {firstPickTeam?.yourTeam ? (
-          <>
-            {/* Second Pick Team Stats (Opponent) */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
-                  {secondPickTeam?.name} Player Stats
-                </h3>
-                <HeroSearchInput
-                  value={secondPickSearchQuery}
-                  onChange={setSecondPickSearchQuery}
+        {/* First Pick Team Stats */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">
+              {firstPickTeam?.name} Player Stats
+              {firstPickTeam?.manualHeroLists?.some(l => l.length > 0) && (
+                <span className="text-sm text-radiant ml-2">(Hero list override)</span>
+              )}
+            </h3>
+            <HeroSearchInput
+              value={firstPickSearchQuery}
+              onChange={setFirstPickSearchQuery}
+            />
+          </div>
+          <div className="grid grid-cols-5 gap-4">
+            {firstPickTeam?.playerIds.map((steamId, idx) => {
+              const stats = firstPickPlayerData.heroStatsMap.get(steamId) || [];
+              const player = firstPickPlayerData.players.get(steamId);
+              const manualList = firstPickTeam?.manualHeroLists?.[idx];
+              return (
+                <PlayerHeroListWithHighlight
+                  key={steamId}
+                  steamId={steamId}
+                  player={player}
+                  heroStats={stats}
+                  heroes={heroes}
+                  bannedHeroIds={bannedHeroIds}
+                  pickedByThisTeam={firstPickPickedHeroIds}
+                  pickedByOpponent={secondPickPickedHeroIds}
+                  manualHeroList={manualList}
+                  searchFilter={firstPickSearchQuery}
                 />
-              </div>
-              <div className="grid grid-cols-5 gap-4">
-                {secondPickTeam?.playerIds.map((steamId, idx) => {
-                  const stats = secondPickPlayerData.heroStatsMap.get(steamId) || [];
-                  const player = secondPickPlayerData.players.get(steamId);
-                  const manualList = secondPickTeam?.manualHeroLists?.[idx];
-                  return (
-                    <PlayerHeroListWithHighlight
-                      key={steamId}
-                      steamId={steamId}
-                      player={player}
-                      heroStats={stats}
-                      heroes={heroes}
-                      bannedHeroIds={bannedHeroIds}
-                      pickedByThisTeam={secondPickPickedHeroIds}
-                      pickedByOpponent={firstPickPickedHeroIds}
-                      manualHeroList={manualList}
-                      searchFilter={secondPickSearchQuery}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+              );
+            })}
+          </div>
+        </div>
 
-            {/* First Pick Team Stats (Your Team) */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
-                  {firstPickTeam?.name} Player Stats
-                  <span className="text-sm text-radiant ml-2">(Your Team - Manual List)</span>
-                </h3>
-                <HeroSearchInput
-                  value={firstPickSearchQuery}
-                  onChange={setFirstPickSearchQuery}
+        {/* Second Pick Team Stats */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">
+              {secondPickTeam?.name} Player Stats
+              {secondPickTeam?.manualHeroLists?.some(l => l.length > 0) && (
+                <span className="text-sm text-radiant ml-2">(Hero list override)</span>
+              )}
+            </h3>
+            <HeroSearchInput
+              value={secondPickSearchQuery}
+              onChange={setSecondPickSearchQuery}
+            />
+          </div>
+          <div className="grid grid-cols-5 gap-4">
+            {secondPickTeam?.playerIds.map((steamId, idx) => {
+              const stats = secondPickPlayerData.heroStatsMap.get(steamId) || [];
+              const player = secondPickPlayerData.players.get(steamId);
+              const manualList = secondPickTeam?.manualHeroLists?.[idx];
+              return (
+                <PlayerHeroListWithHighlight
+                  key={steamId}
+                  steamId={steamId}
+                  player={player}
+                  heroStats={stats}
+                  heroes={heroes}
+                  bannedHeroIds={bannedHeroIds}
+                  pickedByThisTeam={secondPickPickedHeroIds}
+                  pickedByOpponent={firstPickPickedHeroIds}
+                  manualHeroList={manualList}
+                  searchFilter={secondPickSearchQuery}
                 />
-              </div>
-              <div className="grid grid-cols-5 gap-4">
-                {firstPickTeam?.playerIds.map((steamId, idx) => {
-                  const stats = firstPickPlayerData.heroStatsMap.get(steamId) || [];
-                  const player = firstPickPlayerData.players.get(steamId);
-                  const manualList = firstPickTeam?.manualHeroLists?.[idx];
-                  return (
-                    <PlayerHeroListWithHighlight
-                      key={steamId}
-                      steamId={steamId}
-                      player={player}
-                      heroStats={stats}
-                      heroes={heroes}
-                      bannedHeroIds={bannedHeroIds}
-                      pickedByThisTeam={firstPickPickedHeroIds}
-                      pickedByOpponent={secondPickPickedHeroIds}
-                      manualHeroList={manualList}
-                      searchFilter={firstPickSearchQuery}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* First Pick Team Stats */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
-                  {firstPickTeam?.name} Player Stats
-                </h3>
-                <HeroSearchInput
-                  value={firstPickSearchQuery}
-                  onChange={setFirstPickSearchQuery}
-                />
-              </div>
-              <div className="grid grid-cols-5 gap-4">
-                {firstPickTeam?.playerIds.map((steamId, idx) => {
-                  const stats = firstPickPlayerData.heroStatsMap.get(steamId) || [];
-                  const player = firstPickPlayerData.players.get(steamId);
-                  const manualList = firstPickTeam?.manualHeroLists?.[idx];
-                  return (
-                    <PlayerHeroListWithHighlight
-                      key={steamId}
-                      steamId={steamId}
-                      player={player}
-                      heroStats={stats}
-                      heroes={heroes}
-                      bannedHeroIds={bannedHeroIds}
-                      pickedByThisTeam={firstPickPickedHeroIds}
-                      pickedByOpponent={secondPickPickedHeroIds}
-                      manualHeroList={manualList}
-                      searchFilter={firstPickSearchQuery}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Second Pick Team Stats */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
-                  {secondPickTeam?.name} Player Stats
-                  {secondPickTeam?.yourTeam && (
-                    <span className="text-sm text-radiant ml-2">(Your Team - Manual List)</span>
-                  )}
-                </h3>
-                <HeroSearchInput
-                  value={secondPickSearchQuery}
-                  onChange={setSecondPickSearchQuery}
-                />
-              </div>
-              <div className="grid grid-cols-5 gap-4">
-                {secondPickTeam?.playerIds.map((steamId, idx) => {
-                  const stats = secondPickPlayerData.heroStatsMap.get(steamId) || [];
-                  const player = secondPickPlayerData.players.get(steamId);
-                  const manualList = secondPickTeam?.manualHeroLists?.[idx];
-                  return (
-                    <PlayerHeroListWithHighlight
-                      key={steamId}
-                      steamId={steamId}
-                      player={player}
-                      heroStats={stats}
-                      heroes={heroes}
-                      bannedHeroIds={bannedHeroIds}
-                      pickedByThisTeam={secondPickPickedHeroIds}
-                      pickedByOpponent={firstPickPickedHeroIds}
-                      manualHeroList={manualList}
-                      searchFilter={secondPickSearchQuery}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

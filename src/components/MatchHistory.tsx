@@ -18,6 +18,9 @@ export function MatchHistory({ teamId, teamName, playerIds, heroes }: MatchHisto
   const [error, setError] = useState<string | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
 
+
+  const playerIdsKey = playerIds.join(',');
+
   useEffect(() => {
     let cancelled = false;
 
@@ -65,7 +68,7 @@ export function MatchHistory({ teamId, teamName, playerIds, heroes }: MatchHisto
     return () => {
       cancelled = true;
     };
-  }, [teamId, playerIds, refreshCount]);
+  }, [teamId, playerIdsKey, refreshCount]);
 
   if (loading) {
     return (
