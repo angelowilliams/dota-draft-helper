@@ -83,6 +83,15 @@ Two GitHub accounts are configured. **Never mix them up.**
 
 **PR reviews and approvals**: Always use tinker17 for reviewing, approving, or commenting on PRs. Read `BOT_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
 
+## Responding to CR Feedback
+
+When addressing code review comments on a PR:
+
+1. Make the fixes and commit them.
+2. Reply to each review comment with a short description of the fix **and the commit SHA** (e.g. `Fixed in abc1234.`).
+
+This lets the reviewer jump straight to the diff that addresses their comment.
+
 ## Git Worktree Setup
 
 The repo uses bare-style worktrees under `dota-draft-helper/`. There is no checkout at the root — all work happens in worktree subdirectories.
@@ -94,6 +103,7 @@ The repo uses bare-style worktrees under `dota-draft-helper/`. There is no check
 | `wt3/` | Spare worktree slot, same pattern as wt2. |
 
 **Key rules:**
+- **Never run `git` or `gh` from the bare root** (`dota-draft-helper/`). It is not a working tree and has no `.git` directory. Always `cd` into a worktree (`wt1/`, `wt2/`, `wt3/`) first.
 - Each worktree must be on a different branch. You can't check out the same branch in two worktrees.
 - `node_modules` is per-worktree — run `npm install` after creating a new worktree.
 - `.env` is gitignored and not shared — copy it from an existing worktree (e.g. `cp ../wt1/.env .env`).
