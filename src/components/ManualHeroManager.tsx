@@ -94,7 +94,6 @@ function SortableHeroItem({ heroId, heroName, stats, onRemove }: SortableHeroIte
 }
 
 interface PlayerColumnProps {
-  playerIndex: number;
   steamId: string;
   playerName?: string;
   heroList: number[];
@@ -105,7 +104,6 @@ interface PlayerColumnProps {
 }
 
 function PlayerColumn({
-  playerIndex,
   steamId,
   playerName,
   heroList,
@@ -310,7 +308,6 @@ export function ManualHeroManager({ team, players, onClose, onUpdate, embedded =
           return (
             <PlayerColumn
               key={steamId}
-              playerIndex={idx}
               steamId={steamId}
               playerName={player?.name}
               heroList={heroLists[idx] || []}

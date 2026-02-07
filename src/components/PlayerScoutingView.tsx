@@ -2,9 +2,16 @@ import { useState } from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 import { PlayerHeroList } from './PlayerHeroList';
 import { MatchHistory } from './MatchHistory';
+import { LobbyTypeToggle } from './ui/LobbyTypeToggle';
 import { usePlayerData } from '@/hooks/usePlayerData';
 import { useHeroes } from '@/hooks/useHeroes';
-import type { Team, LobbyTypeFilter } from '@/types';
+import type { Team, LobbyTypeFilter, TimeWindowFilter } from '@/types';
+
+const TIME_WINDOW_OPTIONS: { value: TimeWindowFilter; label: string }[] = [
+  { value: 'month', label: 'Last Month' },
+  { value: 'threeMonths', label: 'Last 3 Months' },
+  { value: 'year', label: 'Last Year' },
+];
 
 interface PlayerScoutingViewProps {
   team: Team;
@@ -14,6 +21,7 @@ interface PlayerScoutingViewProps {
 export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [lobbyTypeFilter, setLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
+  const [timeWindowFilter, setTimeWindowFilter] = useState<TimeWindowFilter>('year');
 
   // Validate team data
   if (!team || !team.playerIds || team.playerIds.length === 0) {
@@ -27,9 +35,10 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
     );
   }
 
-  const { heroStatsMap, players, loading, error, refetch } = usePlayerData({
+  const { heroStatsMap, players, loading, loadingProgress, error, refetch } = usePlayerData({
     steamIds: team.playerIds,
     lobbyTypeFilter,
+    timeWindowFilter,
   });
 
   const { heroes, loading: heroesLoading } = useHeroes();
@@ -59,52 +68,49 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
           className="btn-radiant flex items-center gap-2"
         >
           <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          {loading ? 'Fetching...' : 'Refresh Player Data'}
+          {loading
+            ? loadingProgress
+              ? `Fetching player ${loadingProgress.current + 1}/${loadingProgress.total}...`
+              : 'Fetching...'
+            : 'Refresh Player Data'}
         </button>
       </div>
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Info */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Time Window Filter */}
           <div>
-            <p className="text-sm text-dota-text-secondary">
-              Showing statistics from past 100 games per player
-            </p>
+            <label className="block text-sm font-medium mb-2">
+              Time Period
+            </label>
+            <select
+              value={timeWindowFilter}
+              onChange={(e) => setTimeWindowFilter(e.target.value as TimeWindowFilter)}
+              className="input-field w-full"
+            >
+              {TIME_WINDOW_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-dota-text-muted mt-1">
-              {lobbyTypeFilter === 'competitive'
-                ? 'Competitive matches only (tournament/league)'
-                : 'Includes ranked, unranked, and competitive matches (excludes Turbo mode)'}
+              Up to 500 games per player
             </p>
           </div>
 
           {/* Lobby Type Filter */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Game Type Filter
+              Game Type
             </label>
-            <div className="inline-flex rounded-lg border-2 border-dota-bg-tertiary bg-dota-bg-primary overflow-hidden">
-              <button
-                onClick={() => setLobbyTypeFilter('all')}
-                className={`px-6 py-2 text-sm font-semibold transition-all ${
-                  lobbyTypeFilter === 'all'
-                    ? 'bg-radiant text-black shadow-lg'
-                    : 'bg-transparent text-dota-text-secondary hover:text-dota-text-primary hover:bg-dota-bg-tertiary'
-                }`}
-              >
-                All Games
-              </button>
-              <button
-                onClick={() => setLobbyTypeFilter('competitive')}
-                className={`px-6 py-2 text-sm font-semibold transition-all border-l-2 border-dota-bg-tertiary ${
-                  lobbyTypeFilter === 'competitive'
-                    ? 'bg-radiant text-black shadow-lg'
-                    : 'bg-transparent text-dota-text-secondary hover:text-dota-text-primary hover:bg-dota-bg-tertiary'
-                }`}
-              >
-                Competitive
-              </button>
-            </div>
+            <LobbyTypeToggle value={lobbyTypeFilter} onChange={setLobbyTypeFilter} />
+            <p className="text-xs text-dota-text-muted mt-1">
+              {lobbyTypeFilter === 'competitive'
+                ? 'Tournament/league only'
+                : 'All types (excludes Turbo)'}
+            </p>
           </div>
 
           {/* Search Filter */}
@@ -124,8 +130,46 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
               {searchFilter && `Filtering heroes matching "${searchFilter}"`}
             </p>
           </div>
+
+          {/* Info */}
+          <div className="flex items-center">
+            <p className="text-xs text-dota-text-muted">
+              Data is fetched from the past year and filtered locally for fast switching between time periods.
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Loading Progress */}
+      {loading && loadingProgress && (
+        <div className="card">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-dota-text-secondary">
+                  Fetching player data...
+                </span>
+                <span className="text-dota-text-primary">
+                  {loadingProgress.current}/{loadingProgress.total} players
+                </span>
+              </div>
+              <div className="w-full bg-dota-bg-tertiary rounded-full h-2">
+                <div
+                  className="bg-radiant h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${(loadingProgress.current / loadingProgress.total) * 100}%`,
+                  }}
+                />
+              </div>
+              {loadingProgress.currentPlayer && (
+                <p className="text-xs text-dota-text-muted mt-2">
+                  Currently fetching: {loadingProgress.currentPlayer}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error State */}
       {error && (

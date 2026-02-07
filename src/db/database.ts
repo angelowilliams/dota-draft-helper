@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import type { Team, Player, HeroStats, Match, Hero } from '../types';
+import type { Team, Player, HeroStats, Match, Hero, PlayerMatch } from '../types';
 
 export class DotaDraftDatabase extends Dexie {
   teams!: Table<Team, string>;
@@ -7,6 +7,7 @@ export class DotaDraftDatabase extends Dexie {
   heroStats!: Table<HeroStats, [string, number, string]>;
   matches!: Table<Match, string>;
   heroes!: Table<Hero, number>;
+  playerMatches!: Table<PlayerMatch, string>;
 
   constructor() {
     super('DotaDraftHelper');
@@ -44,6 +45,18 @@ export class DotaDraftDatabase extends Dexie {
       heroStats: '[steamId+heroId+lobbyTypeFilter], [steamId+lobbyTypeFilter], steamId, heroId, lobbyTypeFilter, lastPlayed',
       matches: 'matchId, teamId, startDateTime, leagueId',
       heroes: 'id, name, displayName, shortName',
+    });
+
+    // Version 5: Add playerMatches table for storing raw match data
+    // This enables client-side filtering by time window without re-fetching
+    // Primary key is [steamId+matchId] since same match can have multiple tracked players
+    this.version(5).stores({
+      teams: 'id, name, *playerIds, teamId, yourTeam, createdAt',
+      players: 'steamId, name, lastUpdated',
+      heroStats: '[steamId+heroId+lobbyTypeFilter], [steamId+lobbyTypeFilter], steamId, heroId, lobbyTypeFilter, lastPlayed',
+      matches: 'matchId, teamId, startDateTime, leagueId',
+      heroes: 'id, name, displayName, shortName',
+      playerMatches: '[steamId+matchId], steamId, startDateTime, heroId, lobbyType',
     });
   }
 }

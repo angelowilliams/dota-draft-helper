@@ -20,6 +20,18 @@ export interface Player {
 }
 
 export type LobbyTypeFilter = 'all' | 'competitive';
+export type TimeWindowFilter = 'month' | 'threeMonths' | 'year';
+
+// Raw match data stored per player for client-side filtering
+export interface PlayerMatch {
+  matchId: string;
+  steamId: string;
+  heroId: number;
+  isWin: boolean;
+  imp: number | null;
+  lobbyType: number; // 0=unranked, 1=competitive, 7=ranked
+  startDateTime: number; // Unix timestamp (seconds)
+}
 
 export interface HeroStats {
   steamId: string;

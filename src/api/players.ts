@@ -1,5 +1,132 @@
 import { getStratzClient, normalizeToSteam32 } from './stratz';
-import type { StratzPlayer, HeroStats, LobbyTypeFilter } from '@/types';
+import { stratzRateLimiter } from './rateLimiter';
+import type { StratzPlayer, HeroStats, LobbyTypeFilter, PlayerMatch } from '@/types';
+
+const MAX_MATCHES = 500;
+const BATCH_SIZE = 100; // STRATZ API limit per query
+const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
+
+interface FetchPlayerMatchesResult {
+  player: StratzPlayer;
+  matches: PlayerMatch[];
+  totalFetched: number;
+}
+
+/**
+ * Fetches up to MAX_MATCHES (500) games from the past year for a player.
+ * Uses pagination to fetch all available matches within the time window.
+ */
+export async function fetchPlayerMatches(
+  steamId: string
+): Promise<FetchPlayerMatchesResult> {
+  const client = getStratzClient();
+  const steam32Id = normalizeToSteam32(steamId);
+
+  const oneYearAgo = Math.floor(Date.now() / 1000) - ONE_YEAR_SECONDS;
+
+  const query = `
+    query GetPlayerMatches($steamId: Long!, $matchRequest: PlayerMatchesRequestType!) {
+      player(steamAccountId: $steamId) {
+        steamAccount {
+          id
+          name
+          avatar
+          proSteamAccount {
+            name
+          }
+        }
+        matches(request: $matchRequest) {
+          id
+          startDateTime
+          didRadiantWin
+          lobbyType
+          players(steamAccountId: $steamId) {
+            isRadiant
+            heroId
+            imp
+          }
+        }
+      }
+    }
+  `;
+
+  const allMatches: PlayerMatch[] = [];
+  let skip = 0;
+  let hasMore = true;
+  let player: StratzPlayer | null = null;
+
+  while (hasMore && allMatches.length < MAX_MATCHES) {
+    const matchRequest = {
+      gameModeIds: [1, 2, 3, 4, 5, 10, 16, 22], // Exclude Turbo
+      take: BATCH_SIZE,
+      skip,
+      startDateTime: oneYearAgo,
+    };
+
+    try {
+      // Wait for rate limiter before making request
+      await stratzRateLimiter.throttle();
+
+      const data: any = await client.request(query, {
+        steamId: steam32Id,
+        matchRequest,
+      });
+
+      if (!data?.player?.steamAccount) {
+        throw new Error(`Player not found: ${steamId}`);
+      }
+
+      if (!player) {
+        player = data.player;
+      }
+
+      const matches = data.player.matches || [];
+
+      if (matches.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const match of matches) {
+        if (allMatches.length >= MAX_MATCHES) break;
+        if (!match.players?.[0]?.heroId) continue;
+
+        const playerData = match.players[0];
+        const didWin = match.didRadiantWin === playerData.isRadiant;
+
+        allMatches.push({
+          matchId: String(match.id),
+          steamId,
+          heroId: playerData.heroId,
+          isWin: didWin,
+          imp: playerData.imp ?? null,
+          lobbyType: match.lobbyType ?? 0,
+          startDateTime: match.startDateTime,
+        });
+      }
+
+      skip += BATCH_SIZE;
+
+      // If we got fewer than BATCH_SIZE, there are no more matches
+      if (matches.length < BATCH_SIZE) {
+        hasMore = false;
+      }
+    } catch (error) {
+      console.error(`Failed to fetch matches for ${steamId} at skip=${skip}:`, error);
+      throw error;
+    }
+  }
+
+  if (!player) {
+    throw new Error(`Player not found: ${steamId}`);
+  }
+
+  return {
+    player,
+    matches: allMatches,
+    totalFetched: allMatches.length,
+  };
+}
 
 interface FetchPlayerHeroesParams {
   steamId: string;
@@ -19,7 +146,9 @@ export async function fetchPlayerHeroes(
     take: 100,
   };
 
-  // If competitive only, filter by lobby type 1 (tournament/league)
+  // Set lobby type filter
+  // Only filter by lobby type when competitive-only is selected
+  // For 'all', don't specify lobbyTypeIds - let STRATZ return all matches
   if (lobbyTypeFilter === 'competitive') {
     matchRequest.lobbyTypeIds = [1];
   }

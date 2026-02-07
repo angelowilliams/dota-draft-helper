@@ -111,7 +111,7 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
     for (const steamId of playerIds) {
       if (steamId && steamId.trim().length > 0) {
         const player = await getPlayer(steamId.trim());
-        if (player) {
+        if (player && player.name) {
           names[steamId] = player.name;
         }
       }

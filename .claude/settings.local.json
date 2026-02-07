@@ -5,7 +5,13 @@
       "Bash(test:*)",
       "Bash(npm run build:*)",
       "Bash(timeout 5 npm run dev:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "WebFetch(domain:dota.playon.gg)",
+      "Bash(npm test)",
+      "Bash(node -e:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -33,7 +33,6 @@ export function YourTeamView() {
   // Use player data hook for fetching and caching player data
   const { players, loading: dataLoading, refetch } = usePlayerData({
     steamIds: yourTeam?.playerIds || [],
-    autoFetch: false,
   });
 
   const handleCreate = async (teamData: Omit<Team, 'id' | 'createdAt'>) => {

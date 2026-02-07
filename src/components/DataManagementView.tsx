@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Download, Upload, Trash2, Database, X } from 'lucide-react';
+import { Download, Upload, Trash2, Database } from 'lucide-react';
 import { exportAllData, importAllData } from '@/utils/dataExport';
 import { db } from '@/db/database';
 import { useTeams } from '@/hooks/useTeams';

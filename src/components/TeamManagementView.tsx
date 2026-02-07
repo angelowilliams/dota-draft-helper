@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
 import { TeamList } from './TeamList';
 import { TeamForm } from './TeamForm';
+import { AD2LImportModal } from './AD2LImportModal';
 import { useTeams, useTeamOperations } from '@/hooks/useTeams';
 import { getOtherTeams } from '@/db/teams';
 import toast from 'react-hot-toast';
 import type { Team } from '@/types';
 
 export function TeamManagementView() {
-  const { teams: allTeams, loading: teamsLoading } = useTeams();
+  const { teams: allTeams } = useTeams();
   const [otherTeams, setOtherTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const { createTeam, updateTeam, deleteTeam } = useTeamOperations();
   const [showForm, setShowForm] = useState(false);
+  const [showAD2LImport, setShowAD2LImport] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   useEffect(() => {
@@ -92,13 +94,22 @@ export function TeamManagementView() {
             Create and manage opponent team profiles for scouting
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn-radiant flex items-center gap-2"
-        >
-          <Plus size={20} />
-          New Team
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAD2LImport(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Download size={20} />
+            Import Team from AD2L
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn-radiant flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Manually Add Team
+          </button>
+        </div>
       </div>
 
       <TeamList
@@ -114,6 +125,13 @@ export function TeamManagementView() {
           onSubmit={editingTeam ? handleUpdate : handleCreate}
           onCancel={handleCancel}
           initialData={editingTeam || undefined}
+        />
+      )}
+
+      {showAD2LImport && (
+        <AD2LImportModal
+          onImport={handleCreate}
+          onCancel={() => setShowAD2LImport(false)}
         />
       )}
     </div>
