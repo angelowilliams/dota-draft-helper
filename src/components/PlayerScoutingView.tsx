@@ -37,7 +37,7 @@ interface PlayerScoutingViewProps {
 export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [lobbyTypeFilter, setLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
-  const [timeWindowFilter, setTimeWindowFilter] = useState<TimeWindowFilter>('year');
+  const [timeWindowFilter, setTimeWindowFilter] = useState<TimeWindowFilter>('threeMonths');
   const [orderedPlayerIds, setOrderedPlayerIds] = useState<string[]>(team.playerIds);
 
   // Sync when team.playerIds changes (e.g. team edited externally)

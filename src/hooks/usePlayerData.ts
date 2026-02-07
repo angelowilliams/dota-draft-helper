@@ -84,7 +84,7 @@ function aggregateMatchesToHeroStats(
 export function usePlayerData({
   steamIds,
   lobbyTypeFilter = 'all',
-  timeWindowFilter = 'year',
+  timeWindowFilter = 'threeMonths',
 }: UsePlayerDataParams): UsePlayerDataResult {
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState<LoadingProgress | null>(null);
