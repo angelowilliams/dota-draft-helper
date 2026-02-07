@@ -48,6 +48,8 @@ export interface Match {
   didRadiantWin: boolean;
   radiantTeamId?: number;
   direTeamId?: number;
+  radiantTeamName?: string;
+  direTeamName?: string;
   radiantDraft: Draft;
   direDraft: Draft;
   pickBans?: PickBan[]; // Raw pick/ban data with order

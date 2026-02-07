@@ -2,83 +2,70 @@ import { useState, useEffect } from 'react';
 import { Trophy, Calendar, RefreshCw } from 'lucide-react';
 import { DraftDisplay } from './DraftDisplay';
 import { fetchTeamMatches } from '@/api/matches';
-import { fetchTeamInfo } from '@/api/teams';
 import { format } from 'date-fns';
 import type { Match, Hero } from '@/types';
 
 interface MatchHistoryProps {
   teamId: string;
   teamName: string;
+  playerIds: string[];
   heroes: Hero[];
 }
 
-export function MatchHistory({ teamId, teamName, heroes }: MatchHistoryProps) {
+export function MatchHistory({ teamId, teamName, playerIds, heroes }: MatchHistoryProps) {
   const [matches, setMatches] = useState<Match[]>([]);
-  const [opponentNames, setOpponentNames] = useState<Map<number, string>>(new Map());
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
 
   useEffect(() => {
-    loadMatches();
-  }, [teamId]);
+    let cancelled = false;
 
-  const loadMatches = async () => {
-    setLoading(true);
-    setError(null);
+    const load = async () => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      if (!teamId || teamId.trim().length === 0) {
-        throw new Error('Team ID is required');
-      }
-
-      const teamIdNum = parseInt(teamId, 10);
-      if (isNaN(teamIdNum) || teamIdNum <= 0) {
-        throw new Error('Invalid team ID format');
-      }
-
-      const fetchedMatches = await fetchTeamMatches({
-        teamId: teamIdNum,
-        limit: 10,
-      });
-
-      if (!Array.isArray(fetchedMatches)) {
-        throw new Error('Invalid response from API');
-      }
-
-      setMatches(fetchedMatches);
-
-      // Fetch opponent team names
-      const opponentIds = new Set<number>();
-      fetchedMatches.forEach((match) => {
-        const isRadiant = match.radiantTeamId?.toString() === teamId;
-        const opponentId = isRadiant ? match.direTeamId : match.radiantTeamId;
-        if (opponentId) {
-          opponentIds.add(opponentId);
+      try {
+        if (!teamId || teamId.trim().length === 0) {
+          throw new Error('Team ID is required');
         }
-      });
 
-      const newOpponentNames = new Map<number, string>();
-      await Promise.all(
-        Array.from(opponentIds).map(async (opponentId) => {
-          try {
-            const teamInfo = await fetchTeamInfo(opponentId);
-            if (teamInfo) {
-              newOpponentNames.set(opponentId, teamInfo.name);
-            }
-          } catch (err) {
-            console.error(`Failed to fetch team info for ${opponentId}:`, err);
-          }
-        })
-      );
-      setOpponentNames(newOpponentNames);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch matches';
-      setError(message);
-      console.error('Error fetching matches:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const teamIdNum = parseInt(teamId, 10);
+        if (isNaN(teamIdNum) || teamIdNum <= 0) {
+          throw new Error('Invalid team ID format');
+        }
+
+        const fetchedMatches = await fetchTeamMatches({
+          teamId: teamIdNum,
+          playerIds,
+          limit: 10,
+        });
+
+        if (cancelled) return;
+
+        if (!Array.isArray(fetchedMatches)) {
+          throw new Error('Invalid response from API');
+        }
+
+        setMatches(fetchedMatches);
+      } catch (err) {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : 'Failed to fetch matches';
+        setError(message);
+        console.error('Error fetching matches:', err);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId, playerIds, refreshCount]);
 
   if (loading) {
     return (
@@ -128,7 +115,7 @@ export function MatchHistory({ teamId, teamName, heroes }: MatchHistoryProps) {
           Recent Competitive Matches for {teamName}
         </h3>
         <button
-          onClick={loadMatches}
+          onClick={() => setRefreshCount((c) => c + 1)}
           disabled={loading}
           className="btn-radiant flex items-center gap-2"
         >
@@ -139,10 +126,13 @@ export function MatchHistory({ teamId, teamName, heroes }: MatchHistoryProps) {
 
       <div className="space-y-4">
         {matches.map((match) => {
-          const isRadiant = match.radiantTeamId?.toString() === teamId;
+          // Determine side: check team ID first, then team name
+          const isRadiant =
+            match.radiantTeamId?.toString() === teamId ||
+            (!match.radiantTeamId && match.radiantTeamName === teamName);
           const won = isRadiant ? match.didRadiantWin : !match.didRadiantWin;
-          const opponentId = isRadiant ? match.direTeamId : match.radiantTeamId;
-          const opponentName = opponentId ? opponentNames.get(opponentId) || 'Unknown Team' : 'Unknown Team';
+          const opponentName =
+            (isRadiant ? match.direTeamName : match.radiantTeamName) || 'Unknown Team';
 
           return (
             <div

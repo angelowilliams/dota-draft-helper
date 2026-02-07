@@ -77,7 +77,7 @@ Two GitHub accounts are configured. **Never mix them up.**
 | Account | Purpose | Auth |
 |---------|---------|------|
 | `angelowilliams` (main) | Commits, PRs, issues, pushes | Default `gh` auth |
-| `tinker17` (bot) | Code review comments only | `BOT_GITHUB_TOKEN` in `.env` |
+| `tinker17` (bot) | Code review comments only | Classic PAT via `BOT_GITHUB_TOKEN` in `.env` |
 
 **Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN`.
 
