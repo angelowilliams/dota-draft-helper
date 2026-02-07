@@ -85,7 +85,7 @@ Two GitHub accounts are configured. **Never mix them up.** Both authenticate via
 
 **PR reviews and approvals**: Always use Oracle for reviewing, approving, or commenting on PRs. Read `ORACLE_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
 
-**Responding to CR feedback**: Make the fixes, commit them, then reply to each review comment with a short description and the commit SHA (e.g. `Fixed in abc1234.`).
+**Responding to CR feedback**: Make the fixes, commit them, then reply to each review comment with a short description and the commit SHA (e.g. `Fixed in abc1234.`). To reply to an inline review comment use `gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies -f body="..."`. The PR number is required in the path — omitting it causes a 404.
 
 ## Git Workflow
 
