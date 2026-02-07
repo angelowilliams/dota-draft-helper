@@ -20,7 +20,7 @@ User Input → Component → Hook → Service → API/DB → OpenDota/IndexedDB
 - `src/components/` - React components (18 total)
 - `src/contexts/` - DraftContext for draft state
 - `src/services/` - Pure business logic (heroStats, draft)
-- `src/db/` - IndexedDB via Dexie.js (version 5)
+- `src/db/` - IndexedDB via Dexie.js (version 7)
 - `src/hooks/` - Data fetching hooks
 - `src/config/` - draftOrder.ts, heroes.ts
 - `src/utils/` - steamId.ts, validation.ts
@@ -31,7 +31,7 @@ User Input → Component → Hook → Service → API/DB → OpenDota/IndexedDB
 |------|---------|------------------|
 | `src/contexts/DraftContext.tsx` | Draft state management | Yes |
 | `src/config/draftOrder.ts` | Captain's Mode sequence (24 actions) | Never |
-| `src/db/database.ts` | IndexedDB schema v6 | Version bump required |
+| `src/db/database.ts` | IndexedDB schema v7 | Version bump required |
 | `src/types.ts` | Core interfaces | Affects many files |
 
 ## OpenDota API Rules
@@ -77,11 +77,29 @@ Two GitHub accounts are configured. **Never mix them up.**
 | Account | Purpose | Auth |
 |---------|---------|------|
 | `angelowilliams` (main) | Commits, PRs, issues, pushes | Default `gh` auth |
-| `tinker17` (bot) | Code review comments only | Classic PAT via `BOT_GITHUB_TOKEN` in `.env` |
+| `tinker17` (bot) | PR reviews, approvals, and comments | Classic PAT via `BOT_GITHUB_TOKEN` in `.env` |
 
 **Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN`.
 
-**Code review as tinker17**: When the user asks you to review a PR as tinker17, read `BOT_GITHUB_TOKEN` from `.env` and prefix your `gh` commands with `GH_TOKEN=<token>`. Follow the instructions in `.claude/review-prompt.md` for review focus, format, and personality. Only do this when explicitly asked to review as tinker17.
+**PR reviews and approvals**: Always use tinker17 for reviewing, approving, or commenting on PRs. Read `BOT_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
+
+## Git Worktree Setup
+
+The repo uses bare-style worktrees under `dota-draft-helper/`. There is no checkout at the root — all work happens in worktree subdirectories.
+
+| Directory | Role |
+|-----------|------|
+| `wt1/` | Main worktree (has `.git`). Typically tracks `main` or a long-lived branch. |
+| `wt2/` | Feature worktree. Created with `git worktree add ../wt2 -b <branch> <base>`. |
+| `wt3/` | Spare worktree slot, same pattern as wt2. |
+
+**Key rules:**
+- Each worktree must be on a different branch. You can't check out the same branch in two worktrees.
+- `node_modules` is per-worktree — run `npm install` after creating a new worktree.
+- `.env` is gitignored and not shared — copy it from an existing worktree (e.g. `cp ../wt1/.env .env`).
+- All `git worktree` commands (add/list/remove/prune) must be run from inside an existing worktree (e.g. `wt1`).
+- To create a feature branch off a PR branch: `git worktree add ../wt3 -b <new-branch> <base-branch>`
+- To clean up: `git worktree remove ../wt3` (from another worktree), or delete the directory and run `git worktree prune`.
 
 ## Common Tasks
 

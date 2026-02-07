@@ -1,16 +1,24 @@
-import { useState } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { YourTeamView } from './components/YourTeamView';
+import { TeamsView } from './components/TeamsView';
 import { ScoutingView } from './components/ScoutingView';
-import { TeamManagementView } from './components/TeamManagementView';
 import { DraftAssistantView } from './components/DraftAssistantView';
 import { DataManagementView } from './components/DataManagementView';
 import { DraftProvider } from './contexts/DraftContext';
 import type { Team } from './types';
 
 function App() {
-  const [view, setView] = useState<'yourTeam' | 'teams' | 'scouting' | 'draft' | 'data'>('yourTeam');
+  const [view, setView] = useState<'teams' | 'scouting' | 'draft' | 'data'>('teams');
+
+  useEffect(() => {
+    if (!import.meta.env.VITE_OPENDOTA_API_KEY) {
+      toast.error('OpenDota API key missing. Set VITE_OPENDOTA_API_KEY in .env and restart the dev server.', {
+        duration: Infinity,
+        id: 'missing-api-key',
+      });
+    }
+  }, []);
 
   // Scouting state
   const [selectedScoutingTeam, setSelectedScoutingTeam] = useState<Team | null>(null);
@@ -34,16 +42,6 @@ function App() {
 
               <nav className="flex gap-4">
                 <button
-                  onClick={() => setView('yourTeam')}
-                  className={`px-4 py-2 rounded transition-colors ${
-                    view === 'yourTeam'
-                      ? 'bg-dota-bg-tertiary text-dota-text-primary'
-                      : 'text-dota-text-secondary hover:text-dota-text-primary'
-                  }`}
-                >
-                  Your Team
-                </button>
-                <button
                   onClick={() => setView('teams')}
                   className={`px-4 py-2 rounded transition-colors ${
                     view === 'teams'
@@ -51,7 +49,7 @@ function App() {
                       : 'text-dota-text-secondary hover:text-dota-text-primary'
                   }`}
                 >
-                  Other Teams
+                  Teams
                 </button>
                 <button
                   onClick={() => setView('scouting')}
@@ -90,8 +88,7 @@ function App() {
 
         <main className="container mx-auto px-4 py-8">
           <ErrorBoundary>
-            {view === 'yourTeam' && <YourTeamView />}
-            {view === 'teams' && <TeamManagementView />}
+            {view === 'teams' && <TeamsView />}
             {view === 'scouting' && (
               <ScoutingView
                 selectedTeam={selectedScoutingTeam}

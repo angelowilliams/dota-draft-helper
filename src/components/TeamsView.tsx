@@ -1,42 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, Download } from 'lucide-react';
 import { TeamList } from './TeamList';
 import { TeamForm } from './TeamForm';
 import { AD2LImportModal } from './AD2LImportModal';
 import { useTeams, useTeamOperations } from '@/hooks/useTeams';
-import { getOtherTeams } from '@/db/teams';
 import toast from 'react-hot-toast';
 import type { Team } from '@/types';
 
-export function TeamManagementView() {
-  const { teams: allTeams } = useTeams();
-  const [otherTeams, setOtherTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { createTeam, updateTeam, deleteTeam } = useTeamOperations();
+export function TeamsView() {
+  const { teams } = useTeams();
+  const { createTeam, updateTeam, deleteTeam, toggleFavorite } = useTeamOperations();
   const [showForm, setShowForm] = useState(false);
   const [showAD2LImport, setShowAD2LImport] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
-
-  useEffect(() => {
-    loadOtherTeams();
-  }, [allTeams]);
-
-  const loadOtherTeams = async () => {
-    setLoading(true);
-    try {
-      const teams = await getOtherTeams();
-      setOtherTeams(teams);
-    } catch (error) {
-      console.error('Failed to load other teams:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
   const handleCreate = async (teamData: Omit<Team, 'id' | 'createdAt'>) => {
     try {
       await createTeam(teamData);
-      toast.success('Team created successfully');
+      toast.success('Team created');
       setShowForm(false);
     } catch (error) {
       toast.error('Failed to create team');
@@ -49,7 +31,7 @@ export function TeamManagementView() {
 
     try {
       await updateTeam(editingTeam.id, teamData);
-      toast.success('Team updated successfully');
+      toast.success('Team updated');
       setEditingTeam(null);
       setShowForm(false);
     } catch (error) {
@@ -60,8 +42,9 @@ export function TeamManagementView() {
 
   const handleDelete = async (teamId: string) => {
     try {
+      if (expandedTeamId === teamId) setExpandedTeamId(null);
       await deleteTeam(teamId);
-      toast.success('Team deleted successfully');
+      toast.success('Team deleted');
     } catch (error) {
       toast.error('Failed to delete team');
     }
@@ -77,21 +60,17 @@ export function TeamManagementView() {
     setEditingTeam(null);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-dota-text-secondary">Loading teams...</p>
-      </div>
-    );
-  }
+  const handleToggleExpand = (teamId: string) => {
+    setExpandedTeamId(prev => prev === teamId ? null : teamId);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Other Teams</h2>
+          <h2 className="text-2xl font-bold">Teams</h2>
           <p className="text-dota-text-secondary text-sm mt-1">
-            Create and manage opponent team profiles for scouting
+            Manage teams and hero lists
           </p>
         </div>
         <div className="flex gap-2">
@@ -100,24 +79,25 @@ export function TeamManagementView() {
             className="btn-primary flex items-center gap-2"
           >
             <Download size={20} />
-            Import Team from AD2L
+            Import from AD2L
           </button>
           <button
             onClick={() => setShowForm(true)}
             className="btn-radiant flex items-center gap-2"
           >
             <Plus size={20} />
-            Manually Add Team
+            Add Team
           </button>
         </div>
       </div>
 
       <TeamList
-        teams={otherTeams}
+        teams={teams}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onSelect={() => {}}
-        selectedTeamId={undefined}
+        onToggleFavorite={toggleFavorite}
+        expandedTeamId={expandedTeamId}
+        onToggleExpand={handleToggleExpand}
       />
 
       {showForm && (

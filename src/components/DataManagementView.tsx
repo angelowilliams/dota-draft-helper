@@ -186,8 +186,8 @@ export function DataManagementView() {
                         )}
                         <div>
                           <span className="font-medium">{team.name}</span>
-                          {team.yourTeam && (
-                            <span className="ml-2 text-xs text-radiant">(Your Team)</span>
+                          {team.favorite && (
+                            <span className="ml-2 text-xs text-yellow-400">&#9733;</span>
                           )}
                         </div>
                       </div>
