@@ -1,4 +1,4 @@
-import { useState, useEffect, type MutableRefObject } from 'react';
+import { useState, useEffect, useCallback, type MutableRefObject } from 'react';
 import { Search } from 'lucide-react';
 import {
   DndContext,
@@ -89,9 +89,9 @@ export function PlayerScoutingView({ team, controlsRef, onControlsChange }: Play
 
   const { heroes, loading: heroesLoading } = useHeroes();
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await refetch();
-  };
+  }, [refetch]);
 
   // Expose controls to parent
   useEffect(() => {
@@ -99,7 +99,7 @@ export function PlayerScoutingView({ team, controlsRef, onControlsChange }: Play
       controlsRef.current = { refresh: handleRefresh, loading, loadingProgress, lastFetched };
       onControlsChange?.();
     }
-  }, [loading, loadingProgress, lastFetched]);
+  }, [handleRefresh, controlsRef, onControlsChange, loading, loadingProgress, lastFetched]);
 
   const hasData = heroStatsMap.size > 0 && Array.from(heroStatsMap.values()).some(stats => stats.length > 0);
 

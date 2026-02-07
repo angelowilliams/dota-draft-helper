@@ -13,7 +13,7 @@ interface TeamListProps {
   onToggleExpand: (teamId: string) => void;
 }
 
-function ExpandedTeamSection({ team, onUpdate }: { team: Team; onUpdate: () => void }) {
+function ExpandedTeamSection({ team }: { team: Team }) {
   const { players } = usePlayerData({ steamIds: team.playerIds });
 
   return (
@@ -21,7 +21,6 @@ function ExpandedTeamSection({ team, onUpdate }: { team: Team; onUpdate: () => v
       <ManualHeroManager
         team={{ ...team, manualHeroLists: team.manualHeroLists || [[], [], [], [], []] }}
         players={players}
-        onUpdate={onUpdate}
         embedded={true}
       />
     </div>
@@ -135,10 +134,7 @@ export function TeamList({ teams, onEdit, onDelete, onToggleFavorite, expandedTe
             </div>
 
             {isExpanded && (
-              <ExpandedTeamSection
-                team={team}
-                onUpdate={() => {}}
-              />
+              <ExpandedTeamSection team={team} />
             )}
           </div>
         );

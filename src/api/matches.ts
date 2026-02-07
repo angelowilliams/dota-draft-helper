@@ -153,14 +153,21 @@ async function findCompetitiveMatchIdsFromPlayers(
 }
 
 /**
- * Fetch match details for a list of match IDs and return parsed Match objects.
+ * Fetch match details in batches of `concurrency` and return parsed Match objects.
  */
-async function fetchMatchDetailsForIds(matchIds: string[]): Promise<Match[]> {
+async function fetchMatchDetailsInBatches(
+  matchIds: (string | number)[],
+  concurrency = 3
+): Promise<Match[]> {
   const matches: Match[] = [];
-  for (const matchId of matchIds) {
-    const detail = await fetchMatchDetail(Number(matchId));
-    if (!detail) continue;
-    matches.push(parseMatchDetail(detail));
+  for (let i = 0; i < matchIds.length; i += concurrency) {
+    const batch = matchIds.slice(i, i + concurrency);
+    const results = await Promise.all(
+      batch.map((id) => fetchMatchDetail(Number(id)))
+    );
+    for (const detail of results) {
+      if (detail) matches.push(parseMatchDetail(detail));
+    }
   }
   return matches;
 }
@@ -177,16 +184,8 @@ export async function fetchTeamMatches(
     );
 
     if (teamMatches && teamMatches.length > 0) {
-      const matchesToFetch = teamMatches.slice(0, limit);
-      const matches: Match[] = [];
-
-      for (const teamMatch of matchesToFetch) {
-        const detail = await fetchMatchDetail(teamMatch.match_id);
-        if (!detail) continue;
-        matches.push(parseMatchDetail(detail));
-      }
-
-      return matches;
+      const matchIds = teamMatches.slice(0, limit).map((m) => m.match_id);
+      return fetchMatchDetailsInBatches(matchIds);
     }
 
     // Fallback: find competitive matches from cached player data
@@ -197,7 +196,7 @@ export async function fetchTeamMatches(
       );
 
       if (matchIds.length > 0) {
-        return fetchMatchDetailsForIds(matchIds);
+        return fetchMatchDetailsInBatches(matchIds);
       }
     }
 
