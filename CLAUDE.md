@@ -76,11 +76,11 @@ Three GitHub accounts are used. **Never mix them up.**
 
 | Account | Purpose | Auth |
 |---------|---------|------|
-| `angelowilliams` | Git operations (commits, pushes) | Default `gh` auth (keyring) |
+| *(default account)* | Git operations (commits, pushes) | Default `gh` auth (keyring) |
 | `tinker17` | PR descriptions, CR replies, issue comments | Classic PAT via `TINKER_GITHUB_TOKEN` in `.env` |
 | `oracle16117` | PR reviews, approvals, and review comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
 
-**Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN` for git operations (push, pull, clone).
+**Default behavior**: All `gh` commands run via default `gh auth`. Do not set `GH_TOKEN` for git operations (push, pull, clone).
 
 **Tinker commands**: For PR descriptions, CR replies, and issue comments, prefix with `GH_TOKEN=<TINKER_GITHUB_TOKEN>`. Use `.claude/tinker-voicelines.md` for voice lines — pick lines that fit the context.
 
