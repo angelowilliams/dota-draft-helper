@@ -1,10 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw, Search } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { PlayerHeroList } from './PlayerHeroList';
 import { MatchHistory } from './MatchHistory';
 import { LobbyTypeToggle } from './ui/LobbyTypeToggle';
 import { usePlayerData } from '@/hooks/usePlayerData';
 import { useHeroes } from '@/hooks/useHeroes';
+import { updateTeam } from '@/db/teams';
 import type { Team, LobbyTypeFilter, TimeWindowFilter } from '@/types';
 
 const TIME_WINDOW_OPTIONS: { value: TimeWindowFilter; label: string }[] = [
@@ -22,6 +38,31 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [lobbyTypeFilter, setLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
   const [timeWindowFilter, setTimeWindowFilter] = useState<TimeWindowFilter>('year');
+  const [orderedPlayerIds, setOrderedPlayerIds] = useState<string[]>(team.playerIds);
+
+  // Sync when team.playerIds changes (e.g. team edited externally)
+  useEffect(() => {
+    setOrderedPlayerIds(team.playerIds);
+  }, [team.playerIds]);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedPlayerIds.indexOf(active.id as string);
+      const newIndex = orderedPlayerIds.indexOf(over.id as string);
+      const newOrder = arrayMove(orderedPlayerIds, oldIndex, newIndex);
+      setOrderedPlayerIds(newOrder);
+      updateTeam(team.id, { playerIds: newOrder });
+    }
+  };
 
   // Validate team data
   if (!team || !team.playerIds || team.playerIds.length === 0) {
@@ -188,22 +229,34 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-5 gap-4">
-          {team.playerIds.map((steamId) => {
-            const stats = heroStatsMap.get(steamId) || [];
-            const player = players.get(steamId);
-            return (
-              <PlayerHeroList
-                key={steamId}
-                steamId={steamId}
-                player={player}
-                heroStats={stats}
-                heroes={heroes}
-                searchFilter={searchFilter}
-              />
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={orderedPlayerIds}
+            strategy={horizontalListSortingStrategy}
+          >
+            <div className="grid grid-cols-5 gap-4">
+              {orderedPlayerIds.map((steamId) => {
+                const stats = heroStatsMap.get(steamId) || [];
+                const player = players.get(steamId);
+                return (
+                  <PlayerHeroList
+                    key={steamId}
+                    id={steamId}
+                    steamId={steamId}
+                    player={player}
+                    heroStats={stats}
+                    heroes={heroes}
+                    searchFilter={searchFilter}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Team Match History */}

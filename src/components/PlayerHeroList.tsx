@@ -1,8 +1,12 @@
 import { useMemo } from 'react';
+import { GripVertical } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { getHeroPortraitUrl } from '@/config/heroes';
 import type { HeroStats, Hero, Player } from '@/types';
 
 interface PlayerHeroListProps {
+  id: string;
   steamId: string;
   player?: Player;
   heroStats: HeroStats[];
@@ -11,12 +15,27 @@ interface PlayerHeroListProps {
 }
 
 export function PlayerHeroList({
+  id,
   steamId,
   player,
   heroStats,
   heroes,
   searchFilter = '',
 }: PlayerHeroListProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
   const filteredAndSortedHeroes = useMemo(() => {
     if (!heroStats || !Array.isArray(heroStats)) {
       return [];
@@ -48,8 +67,15 @@ export function PlayerHeroList({
   }, [heroStats, heroes, searchFilter]);
 
   return (
-    <div className="card">
-      <div className="mb-4">
+    <div ref={setNodeRef} style={style} className="card">
+      <div className="mb-4 flex items-center gap-2">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-dota-text-muted hover:text-dota-text-primary"
+        >
+          <GripVertical size={16} />
+        </div>
         <h3 className="text-base font-semibold">
           <a
             href={`https://www.opendota.com/players/${steamId}`}
