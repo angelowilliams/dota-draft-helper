@@ -2,7 +2,7 @@
 
 A local web application for Dota 2 teams to scout opponents and assist during Captain's Mode drafts.
 
-*Note: All code and documentation in this repo is AI-generated.*
+**DISCLAIMER: This repo is all vibe coded. Proceed with caution.**
 
 ## Quick Start
 
