@@ -116,6 +116,8 @@ Two GitHub accounts are configured. **Never mix them up.**
 - Assume Radiant = First Pick
 - Commit .env file
 - Use `BOT_GITHUB_TOKEN` unless explicitly asked to review as tinker17
+- Amend commits or force-push. Make new commits and push normally.
+- Add "Generated with Claude Code" or similar branding to commits, PRs, or comments
 
 ## Debugging
 
