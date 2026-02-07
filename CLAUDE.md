@@ -72,14 +72,14 @@ This enables instant filter switching without re-fetching.
 
 ## GitHub Workflow
 
-Two GitHub accounts are configured. **Never mix them up.**
+Two GitHub accounts are configured. **Never mix them up.** Both authenticate via classic GitHub Personal Access Tokens stored in `.env`.
 
 | Account | Purpose | Auth |
 |---------|---------|------|
-| `tinker17` (main) | Coding, commits, PRs, merging, issues, pushes | Default `gh` auth |
-| `Oracle` (reviewer) | PR reviews, approvals, and comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
+| Tinker | Dev work: coding, commits, PRs, merging, issues, pushes | Classic PAT via `TINKER_GITHUB_TOKEN` in `.env` (default `gh` auth) |
+| Oracle | PR reviews, approvals, and comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
 
-**Default behavior**: All `gh` commands run as `tinker17` via default `gh auth`. Do not set `GH_TOKEN`.
+**Default behavior**: All `gh` commands run as Tinker via default `gh` auth (backed by `TINKER_GITHUB_TOKEN`). Do not set `GH_TOKEN` for Tinker commands.
 
 **PR reviews and approvals**: Always use Oracle for reviewing, approving, or commenting on PRs. Read `ORACLE_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
 
@@ -90,6 +90,8 @@ Two GitHub accounts are configured. **Never mix them up.**
 ### Worktree layout
 
 The repo uses worktrees under `dota-draft-helper/`. There is no checkout at the root — all work happens in worktree subdirectories.
+
+**`STATE.md`** lives at the bare root (`dota-draft-helper/STATE.md`) and tracks which worktree holds which branch and PR. Update it whenever you create, reassign, or remove a worktree. Check it at the start of a session to understand the current layout.
 
 | Directory | Role | Lifetime |
 |-----------|------|----------|
@@ -137,6 +139,7 @@ git remote prune origin
 - **PRs always target `main`.** Never target another feature branch.
 - **Clean up immediately after merge.** Remove the worktree, delete the local branch, pull main, prune remotes. Don't leave orphaned worktrees or stale branches.
 - **Never run `git` or `gh` from the bare root** (`dota-draft-helper/`). Always work from inside a worktree.
+- **Update `STATE.md`** at the bare root after any worktree change (create, remove, branch switch).
 - Each worktree must be on a different branch.
 - `node_modules` is per-worktree — run `npm install` after creating a new worktree.
 - `.env` is gitignored — copy it from wt1 when creating a new worktree.
