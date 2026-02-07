@@ -83,33 +83,63 @@ Two GitHub accounts are configured. **Never mix them up.**
 
 **PR reviews and approvals**: Always use tinker17 for reviewing, approving, or commenting on PRs. Read `BOT_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
 
-## Responding to CR Feedback
+**Responding to CR feedback**: Make the fixes, commit them, then reply to each review comment with a short description and the commit SHA (e.g. `Fixed in abc1234.`).
 
-When addressing code review comments on a PR:
+## Git Workflow
 
-1. Make the fixes and commit them.
-2. Reply to each review comment with a short description of the fix **and the commit SHA** (e.g. `Fixed in abc1234.`).
+### Worktree layout
 
-This lets the reviewer jump straight to the diff that addresses their comment.
+The repo uses worktrees under `dota-draft-helper/`. There is no checkout at the root — all work happens in worktree subdirectories.
 
-## Git Worktree Setup
+| Directory | Role | Lifetime |
+|-----------|------|----------|
+| `wt1/` | Main worktree (has `.git`). Always on `main`. | Permanent |
+| `wt2/` | Feature worktree. | Ephemeral — remove after PR merges |
+| `wt3/` | Second feature worktree, same as wt2. | Ephemeral |
 
-The repo uses bare-style worktrees under `dota-draft-helper/`. There is no checkout at the root — all work happens in worktree subdirectories.
+### Starting a feature
 
-| Directory | Role |
-|-----------|------|
-| `wt1/` | Main worktree (has `.git`). Typically tracks `main` or a long-lived branch. |
-| `wt2/` | Feature worktree. Created with `git worktree add ../wt2 -b <branch> <base>`. |
-| `wt3/` | Spare worktree slot, same pattern as wt2. |
+Run all commands from `wt1/` (which is always on `main`):
 
-**Key rules:**
-- **Never run `git` or `gh` from the bare root** (`dota-draft-helper/`). It is not a working tree and has no `.git` directory. Always `cd` into a worktree (`wt1/`, `wt2/`, `wt3/`) first.
-- Each worktree must be on a different branch. You can't check out the same branch in two worktrees.
+```bash
+git fetch origin
+git worktree add ../wt2 -b my-feature origin/main
+cp .env ../wt2/.env
+cd ../wt2
+npm install
+```
+
+### During development
+
+Work in the feature worktree (`wt2/` or `wt3/`). Commit and push normally:
+
+```bash
+git add <files>
+git commit -m "message"
+git push -u origin my-feature
+gh pr create --base main
+```
+
+### After PR merges
+
+Clean up immediately. Run from `wt1/`:
+
+```bash
+git worktree remove ../wt2
+git branch -d my-feature
+git pull origin main
+git remote prune origin
+```
+
+### Rules
+
+- **wt1 stays on `main`.** Never check out a feature branch in wt1.
+- **PRs always target `main`.** Never target another feature branch.
+- **Clean up immediately after merge.** Remove the worktree, delete the local branch, pull main, prune remotes. Don't leave orphaned worktrees or stale branches.
+- **Never run `git` or `gh` from the bare root** (`dota-draft-helper/`). Always work from inside a worktree.
+- Each worktree must be on a different branch.
 - `node_modules` is per-worktree — run `npm install` after creating a new worktree.
-- `.env` is gitignored and not shared — copy it from an existing worktree (e.g. `cp ../wt1/.env .env`).
-- All `git worktree` commands (add/list/remove/prune) must be run from inside an existing worktree (e.g. `wt1`).
-- To create a feature branch off a PR branch: `git worktree add ../wt3 -b <new-branch> <base-branch>`
-- To clean up: `git worktree remove ../wt3` (from another worktree), or delete the directory and run `git worktree prune`.
+- `.env` is gitignored — copy it from wt1 when creating a new worktree.
 
 ## Common Tasks
 
