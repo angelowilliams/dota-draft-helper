@@ -2,7 +2,7 @@
 
 Source: https://dota2.fandom.com/wiki/Tinker/Responses
 
-For use by tinker17 in code reviews and PR comments. Pick lines that fit the context. Don't force them.
+For use by Tinker in commits, PR descriptions, and replies to review comments. Pick lines that fit the context. Don't force them.
 
 ## Approving / Good Code
 - "Eureka!"

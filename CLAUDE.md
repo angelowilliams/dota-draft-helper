@@ -72,24 +72,29 @@ This enables instant filter switching without re-fetching.
 
 ## GitHub Workflow
 
-Two GitHub accounts are configured. **Never mix them up.**
+Three GitHub accounts are used. **Never mix them up.**
 
 | Account | Purpose | Auth |
 |---------|---------|------|
-| `angelowilliams` (main) | Commits, PRs, issues, pushes | Default `gh` auth |
-| `tinker17` (bot) | PR reviews, approvals, and comments | Classic PAT via `BOT_GITHUB_TOKEN` in `.env` |
+| `angelowilliams` | Git operations (commits, pushes) | Default `gh` auth (keyring) |
+| `tinker17` | PR descriptions, CR replies, issue comments | Classic PAT via `TINKER_GITHUB_TOKEN` in `.env` |
+| `oracle16117` | PR reviews, approvals, and review comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
 
-**Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN`.
+**Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN` for git operations (push, pull, clone).
 
-**PR reviews and approvals**: Always use tinker17 for reviewing, approving, or commenting on PRs. Read `BOT_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
+**Tinker commands**: For PR descriptions, CR replies, and issue comments, prefix with `GH_TOKEN=<TINKER_GITHUB_TOKEN>`. Use `.claude/tinker-voicelines.md` for voice lines — pick lines that fit the context.
 
-**Responding to CR feedback**: Make the fixes, commit them, then reply to each review comment with a short description and the commit SHA (e.g. `Fixed in abc1234.`).
+**Oracle commands**: For reviewing, approving, or commenting on PRs, prefix with `GH_TOKEN=<ORACLE_GITHUB_TOKEN>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
+
+**Responding to CR feedback**: Make the fixes, commit them, then reply to each review comment with a short description and the commit SHA (e.g. `Fixed in abc1234.`). To reply to an inline review comment use `gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies -f body="..."`. The PR number is required in the path — omitting it causes a 404.
 
 ## Git Workflow
 
 ### Worktree layout
 
 The repo uses worktrees under `dota-draft-helper/`. There is no checkout at the root — all work happens in worktree subdirectories.
+
+**`STATE.md`** lives at the bare root (`dota-draft-helper/STATE.md`) and tracks which worktree holds which branch and PR. Update it whenever you create, reassign, or remove a worktree. Check it at the start of a session to understand the current layout.
 
 | Directory | Role | Lifetime |
 |-----------|------|----------|
@@ -137,6 +142,7 @@ git remote prune origin
 - **PRs always target `main`.** Never target another feature branch.
 - **Clean up immediately after merge.** Remove the worktree, delete the local branch, pull main, prune remotes. Don't leave orphaned worktrees or stale branches.
 - **Never run `git` or `gh` from the bare root** (`dota-draft-helper/`). Always work from inside a worktree.
+- **Update `STATE.md`** at the bare root after any worktree change (create, remove, branch switch).
 - Each worktree must be on a different branch.
 - `node_modules` is per-worktree — run `npm install` after creating a new worktree.
 - `.env` is gitignored — copy it from wt1 when creating a new worktree.
@@ -173,7 +179,7 @@ git remote prune origin
 - Use Steam64 directly in API calls
 - Assume Radiant = First Pick
 - Commit .env file
-- Use `BOT_GITHUB_TOKEN` unless explicitly asked to review as tinker17
+- Use `ORACLE_GITHUB_TOKEN` for non-review commands
 - Amend commits or force-push. Make new commits and push normally.
 - Add "Generated with Claude Code" or similar branding to commits, PRs, or comments
 
