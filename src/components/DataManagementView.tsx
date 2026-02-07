@@ -68,7 +68,7 @@ export function DataManagementView() {
       await Promise.all([
         db.teams.clear(),
         db.players.clear(),
-        db.heroStats.clear(),
+        db.playerMatches.clear(),
         db.matches.clear(),
         db.heroes.clear(),
       ]);

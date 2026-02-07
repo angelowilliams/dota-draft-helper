@@ -10,9 +10,9 @@ A local web application for Dota 2 teams to scout opponents and assist during Ca
 # Install dependencies
 npm install
 
-# Configure STRATZ API token (free at https://stratz.com/api)
+# Configure OpenDota API key (free at https://www.opendota.com/api-keys)
 cp .env.example .env
-# Edit .env with your token
+# Edit .env with your API key
 
 # Download hero portraits
 npm run fetch-heroes
@@ -44,7 +44,7 @@ npm run dev
 
 ```
 src/
-├── api/           # STRATZ GraphQL API
+├── api/           # OpenDota REST API
 ├── components/    # React components
 ├── contexts/      # React contexts (DraftContext)
 ├── db/            # IndexedDB (Dexie.js)
@@ -57,7 +57,7 @@ src/
 
 ## Tech Stack
 
-React 18 + TypeScript + Vite + Tailwind CSS + IndexedDB (Dexie.js) + STRATZ GraphQL API
+React 18 + TypeScript + Vite + Tailwind CSS + IndexedDB (Dexie.js) + OpenDota REST API
 
 ## For AI Agents
 

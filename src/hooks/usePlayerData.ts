@@ -2,13 +2,15 @@ import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   getMultiplePlayerMatches,
-  savePlayerMatches,
-  clearPlayerMatches,
   savePlayers,
   getPlayer,
+  bulkReplaceAllPlayerMatches,
 } from '@/db/players';
 import { fetchPlayerMatches } from '@/api/players';
 import type { HeroStats, Player, LobbyTypeFilter, TimeWindowFilter, PlayerMatch } from '@/types';
+
+// Lobby types considered "competitive" (tournament/league only)
+const COMPETITIVE_LOBBY_TYPES = new Set([1, 2]);
 
 interface UsePlayerDataParams {
   steamIds: string[];
@@ -44,7 +46,7 @@ function getTimeWindowStart(timeWindow: TimeWindowFilter): number {
   }
 }
 
-// Aggregate matches into hero stats
+// Aggregate matches into hero stats, filtered by time window and lobby type
 function aggregateMatchesToHeroStats(
   matches: PlayerMatch[],
   steamId: string,
@@ -52,64 +54,31 @@ function aggregateMatchesToHeroStats(
   timeWindowFilter: TimeWindowFilter
 ): HeroStats[] {
   const timeWindowStart = getTimeWindowStart(timeWindowFilter);
+  const heroMap = new Map<number, { games: number; wins: number }>();
 
-  // Filter matches by time window
-  const filteredMatches = matches.filter((m) => m.startDateTime >= timeWindowStart);
+  for (const match of matches) {
+    if (match.startDateTime < timeWindowStart) continue;
+    if (lobbyTypeFilter === 'competitive' && !COMPETITIVE_LOBBY_TYPES.has(match.lobbyType)) continue;
 
-  // Aggregate by hero
-  const heroStatsMap = new Map<
-    number,
-    {
-      pubGames: number;
-      compGames: number;
-      wins: number;
-      impSum: number;
-      impCount: number;
-    }
-  >();
-
-  for (const match of filteredMatches) {
-    // Filter by lobby type if needed
-    if (lobbyTypeFilter === 'competitive' && match.lobbyType !== 1) {
-      continue;
-    }
-
-    let stats = heroStatsMap.get(match.heroId);
+    let stats = heroMap.get(match.heroId);
     if (!stats) {
-      stats = { pubGames: 0, compGames: 0, wins: 0, impSum: 0, impCount: 0 };
-      heroStatsMap.set(match.heroId, stats);
+      stats = { games: 0, wins: 0 };
+      heroMap.set(match.heroId, stats);
     }
 
-    // lobbyType 1 = competitive (tournament/league)
-    if (match.lobbyType === 1) {
-      stats.compGames++;
-    } else {
-      stats.pubGames++;
-    }
-
-    if (match.isWin) {
-      stats.wins++;
-    }
-
-    if (match.imp !== null) {
-      stats.impSum += match.imp;
-      stats.impCount++;
-    }
+    stats.games++;
+    if (match.isWin) stats.wins++;
   }
 
-  // Convert to HeroStats array
-  return Array.from(heroStatsMap.entries())
+  return Array.from(heroMap.entries())
     .map(([heroId, stats]) => ({
       steamId,
       heroId,
-      lobbyTypeFilter,
-      pubGames: stats.pubGames,
-      competitiveGames: stats.compGames,
+      games: stats.games,
       wins: stats.wins,
-      avgImp: stats.impCount > 0 ? stats.impSum / stats.impCount : 0,
-      lastPlayed: new Date(),
+      avgImp: 0,
     }))
-    .filter((stat) => stat.pubGames > 0 || stat.competitiveGames > 0);
+    .filter((stat) => stat.games > 0);
 }
 
 export function usePlayerData({
@@ -138,6 +107,9 @@ export function usePlayerData({
     }
     return players;
   }, [steamIds]);
+
+  // True while useLiveQuery is resolving from IndexedDB (before first result)
+  const dbLoading = steamIds.length > 0 && cachedMatches === undefined;
 
   // Compute hero stats from cached matches, filtered by time window and lobby type
   const heroStatsMap = useMemo(() => {
@@ -169,12 +141,12 @@ export function usePlayerData({
     setLoadingProgress({ current: 0, total: steamIds.length, currentPlayer: null });
 
     try {
-      // Clear existing matches for these players
-      await clearPlayerMatches(steamIds);
-
-      // Fetch players sequentially to show progress and help rate limiting
+      // Fetch all players first, then write to DB in a single transaction.
+      // This avoids a race condition where rapid sequential DB writes cause
+      // useLiveQuery to re-run with incomplete subscription tracking,
+      // resulting in some players' data appearing to disappear.
       const playersToSave: Player[] = [];
-      const allMatches: PlayerMatch[] = [];
+      const fetchedMatchesBySteamId = new Map<string, PlayerMatch[]>();
 
       for (let i = 0; i < steamIds.length; i++) {
         const steamId = steamIds[i];
@@ -188,33 +160,36 @@ export function usePlayerData({
           const { player, matches, totalFetched } = await fetchPlayerMatches(steamId);
           console.log(`Fetched ${totalFetched} matches for ${steamId}`);
 
-          if (player) {
+          fetchedMatchesBySteamId.set(steamId, matches);
+
+          if (player?.profile) {
             const playerName =
-              player.steamAccount.proSteamAccount?.name ||
-              player.steamAccount.name ||
+              player.profile.name ||
+              player.profile.personaname ||
               `Player ${steamId}`;
 
             playersToSave.push({
               steamId,
               name: playerName,
-              avatarUrl: player.steamAccount.avatar,
+              avatarUrl: player.profile.avatarfull,
             });
           }
-          allMatches.push(...matches);
         } catch (error) {
           console.error(`Failed to fetch data for ${steamId}:`, error);
           // Continue with other players even if one fails
+          // Old data is preserved since we only replace successfully fetched players
         }
       }
 
       setLoadingProgress({ current: steamIds.length, total: steamIds.length, currentPlayer: null });
 
-      if (playersToSave.length > 0) {
-        await savePlayers(playersToSave);
+      // Write all fetched matches to DB in a single transaction
+      if (fetchedMatchesBySteamId.size > 0) {
+        await bulkReplaceAllPlayerMatches(fetchedMatchesBySteamId);
       }
 
-      if (allMatches.length > 0) {
-        await savePlayerMatches(allMatches);
+      if (playersToSave.length > 0) {
+        await savePlayers(playersToSave);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch player data';
@@ -229,7 +204,7 @@ export function usePlayerData({
   return {
     heroStatsMap,
     players: cachedPlayers || new Map(),
-    loading,
+    loading: loading || dbLoading,
     loadingProgress,
     error,
     refetch,

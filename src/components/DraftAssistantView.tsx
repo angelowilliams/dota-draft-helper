@@ -39,6 +39,10 @@ function PlayerHeroListWithHighlight({
       return [];
     }
 
+    const defaultStat = (heroId: number): HeroStats => ({
+      steamId, heroId, games: 0, wins: 0, avgImp: 0,
+    });
+
     let items;
 
     if (manualHeroList && Array.isArray(manualHeroList) && manualHeroList.length > 0) {
@@ -46,46 +50,22 @@ function PlayerHeroListWithHighlight({
         .map((heroId) => {
           const hero = heroes.find((h) => h.id === heroId);
           if (!hero) return null;
-
           const stat = heroStats?.find((s) => s.heroId === heroId);
-
-          return {
-            hero,
-            stat: stat || {
-              steamId,
-              heroId,
-              lobbyTypeFilter: 'all' as const,
-              pubGames: 0,
-              competitiveGames: 0,
-              wins: 0,
-              avgImp: 0,
-            },
-            totalGames: stat ? stat.pubGames + stat.competitiveGames : 0,
-          };
+          return { hero, stat: stat || defaultStat(heroId) };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null);
     } else {
-      if (!heroStats || !Array.isArray(heroStats)) {
-        return [];
-      }
+      if (!heroStats || !Array.isArray(heroStats)) return [];
 
       items = heroStats
         .map((stat) => {
-          if (!stat || typeof stat.heroId !== 'number') {
-            return null;
-          }
-
+          if (!stat || typeof stat.heroId !== 'number') return null;
           const hero = heroes.find((h) => h.id === stat.heroId);
           if (!hero) return null;
-
-          return {
-            hero,
-            stat,
-            totalGames: stat.pubGames + stat.competitiveGames,
-          };
+          return { hero, stat };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null)
-        .sort((a, b) => b.totalGames - a.totalGames);
+        .sort((a, b) => b.stat.games - a.stat.games);
     }
 
     if (searchFilter && searchFilter.trim().length > 0) {
@@ -104,7 +84,7 @@ function PlayerHeroListWithHighlight({
       <div className="mb-4">
         <h3 className="text-base font-semibold">
           <a
-            href={`https://stratz.com/players/${steamId}`}
+            href={`https://www.opendota.com/players/${steamId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-radiant hover:text-radiant-light transition-colors"
@@ -122,16 +102,14 @@ function PlayerHeroListWithHighlight({
         <div>
           <div className="flex items-center gap-2 pb-2 border-b border-dota-bg-tertiary text-xs font-medium text-dota-text-muted">
             <div className="flex-shrink-0" style={{ width: '48px' }} />
-            <div className="flex-1 grid grid-cols-4 gap-2 text-center">
-              <div>Total</div>
-              <div>Comp</div>
+            <div className="flex-1 grid grid-cols-2 gap-2 text-center">
+              <div>Games</div>
               <div>Win%</div>
-              <div>IMP</div>
             </div>
           </div>
 
           <div className="space-y-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: '580px' }}>
-            {sortedHeroes.map(({ hero, stat, totalGames }) => {
+            {sortedHeroes.map(({ hero, stat }) => {
               const isBanned = bannedHeroIds.has(hero.id);
               const isPickedByThisTeam = pickedByThisTeam.has(hero.id);
               const isPickedByOpponent = pickedByOpponent.has(hero.id);
@@ -160,16 +138,12 @@ function PlayerHeroListWithHighlight({
                     className={imgClass}
                     style={{ width: 'auto', height: 'auto', maxWidth: '48px' }}
                   />
-                  <div className="flex-1 grid grid-cols-4 gap-2 text-xs text-center">
-                    <div className="font-medium text-dota-text-primary">{totalGames}</div>
-                    <div className="text-radiant font-medium">{stat.competitiveGames}</div>
+                  <div className="flex-1 grid grid-cols-2 gap-2 text-xs text-center">
+                    <div className="font-medium text-dota-text-primary">{stat.games}</div>
                     <div className="text-dota-text-secondary">
-                      {stat.wins !== undefined && totalGames > 0
-                        ? `${Math.round((stat.wins / totalGames) * 100)}%`
+                      {stat.games > 0
+                        ? `${Math.round((stat.wins / stat.games) * 100)}%`
                         : '-'}
-                    </div>
-                    <div className="text-dota-text-secondary">
-                      {stat.avgImp !== undefined ? stat.avgImp.toFixed(0) : '-'}
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 {
   "name": "refresh-heroes",
-  "description": "Fetch and update hero portraits from STRATZ API",
-  "instructions": "Run the hero fetch script to download or update hero portrait images. This should be run when:\n1. Setting up the project for the first time\n2. New heroes are added to Dota 2\n3. Hero portraits need to be refreshed\n\nSteps:\n1. Ensure VITE_STRATZ_API_TOKEN is set in .env\n2. Run: npm run fetch-heroes\n3. Verify that public/heroes/ directory contains PNG files\n4. Check console output for any failed downloads",
+  "description": "Fetch and update hero portraits",
+  "instructions": "Run the hero fetch script to download or update hero portrait images. This should be run when:\n1. Setting up the project for the first time\n2. New heroes are added to Dota 2\n3. Hero portraits need to be refreshed\n\nSteps:\n1. Ensure VITE_OPENDOTA_API_KEY is set in .env\n2. Run: npm run fetch-heroes\n3. Verify that public/heroes/ directory contains PNG files\n4. Check console output for any failed downloads",
   "actions": [
     {
       "type": "bash",

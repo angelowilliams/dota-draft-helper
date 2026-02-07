@@ -12,7 +12,7 @@ interface HeroStatsTableProps {
 interface HeroRow {
   heroId: number;
   hero: Hero;
-  playerStats: Map<string, { pub: number; comp: number }>;
+  playerGames: Map<string, number>;
   totalGames: number;
 }
 
@@ -44,24 +44,21 @@ export function HeroStatsTable({
           return null;
         }
 
-        const playerStats = new Map<string, { pub: number; comp: number }>();
+        const playerGames = new Map<string, number>();
         let totalGames = 0;
 
         steamIds.forEach((steamId) => {
           const stats = heroStatsMap.get(steamId) || [];
           const heroStat = stats.find((s) => s.heroId === heroId);
-
-          const pub = heroStat?.pubGames || 0;
-          const comp = heroStat?.competitiveGames || 0;
-
-          playerStats.set(steamId, { pub, comp });
-          totalGames += pub + comp;
+          const games = heroStat?.games || 0;
+          playerGames.set(steamId, games);
+          totalGames += games;
         });
 
         return {
           heroId,
           hero,
-          playerStats,
+          playerGames,
           totalGames,
         };
       })
@@ -103,12 +100,8 @@ export function HeroStatsTable({
               <th
                 key={steamId}
                 className="px-4 py-3 text-center border-b border-dota-bg-primary"
-                colSpan={2}
               >
                 <div className="text-sm font-medium">Player {index + 1}</div>
-                <div className="text-xs text-dota-text-muted mt-1">
-                  Pub | Comp
-                </div>
               </th>
             ))}
             <th className="px-4 py-3 text-center border-b border-dota-bg-primary">
@@ -136,40 +129,15 @@ export function HeroStatsTable({
                 </div>
               </td>
               {steamIds.map((steamId) => {
-                const stats = row.playerStats.get(steamId) || {
-                  pub: 0,
-                  comp: 0,
-                };
-                const hasPub = stats.pub > 0;
-                const hasComp = stats.comp > 0;
-
+                const games = row.playerGames.get(steamId) || 0;
                 return (
                   <td
                     key={`${row.heroId}-${steamId}`}
                     className="px-4 py-2 text-center border-b border-dota-bg-tertiary"
-                    colSpan={2}
                   >
-                    <div className="flex items-center justify-center gap-3 text-sm">
-                      <span
-                        className={
-                          hasPub
-                            ? 'text-dota-text-primary font-medium'
-                            : 'text-dota-text-muted'
-                        }
-                      >
-                        {stats.pub}
-                      </span>
-                      <span className="text-dota-text-muted">|</span>
-                      <span
-                        className={
-                          hasComp
-                            ? 'text-radiant font-medium'
-                            : 'text-dota-text-muted'
-                        }
-                      >
-                        {stats.comp}
-                      </span>
-                    </div>
+                    <span className={games > 0 ? 'text-sm text-dota-text-primary font-medium' : 'text-sm text-dota-text-muted'}>
+                      {games}
+                    </span>
                   </td>
                 );
               })}

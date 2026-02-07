@@ -19,7 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useHeroes } from '@/hooks/useHeroes';
 import { updateManualHeroLists } from '@/db/teams';
-import { getHeroStats } from '@/db/players';
+import { getPlayerMatches } from '@/db/players';
 import { getHeroPortraitUrl } from '@/config/heroes';
 import toast from 'react-hot-toast';
 import type { Team, HeroStats, Player } from '@/types';
@@ -50,7 +50,7 @@ function SortableHeroItem({ heroId, heroName, stats, onRemove }: SortableHeroIte
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const totalGames = stats ? stats.pubGames + stats.competitiveGames : 0;
+  const games = stats?.games || 0;
 
   return (
     <div
@@ -67,16 +67,12 @@ function SortableHeroItem({ heroId, heroName, stats, onRemove }: SortableHeroIte
         className="rounded flex-shrink-0"
         style={{ width: 'auto', height: 'auto', maxWidth: '48px' }}
       />
-      <div className="flex-1 grid grid-cols-4 gap-2 text-xs text-center">
-        <div className="font-medium text-dota-text-primary">{totalGames}</div>
-        <div className="text-radiant font-medium">{stats?.competitiveGames || 0}</div>
+      <div className="flex-1 grid grid-cols-2 gap-2 text-xs text-center">
+        <div className="font-medium text-dota-text-primary">{games}</div>
         <div className="text-dota-text-secondary">
-          {stats?.wins !== undefined && totalGames > 0
-            ? `${Math.round((stats.wins / totalGames) * 100)}%`
+          {stats && games > 0
+            ? `${Math.round((stats.wins / games) * 100)}%`
             : '-'}
-        </div>
-        <div className="text-dota-text-secondary">
-          {stats?.avgImp !== undefined ? stats.avgImp.toFixed(0) : '-'}
         </div>
       </div>
       <button
@@ -143,7 +139,7 @@ function PlayerColumn({
       <div className="mb-4">
         <h3 className="text-base font-semibold">
           <a
-            href={`https://stratz.com/players/${steamId}`}
+            href={`https://www.opendota.com/players/${steamId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-radiant hover:text-radiant-light transition-colors"
@@ -197,18 +193,12 @@ function PlayerColumn({
         <div>
           {/* Header Row */}
           <div className="flex items-center gap-2 pb-2 border-b border-dota-bg-tertiary text-xs font-medium text-dota-text-muted">
-            <div className="flex-shrink-0" style={{ width: '48px' }}>
-              {/* Hero image space */}
-            </div>
-            <div className="flex-1 grid grid-cols-4 gap-2 text-center">
-              <div>Total</div>
-              <div>Comp</div>
+            <div className="flex-shrink-0" style={{ width: '48px' }} />
+            <div className="flex-1 grid grid-cols-2 gap-2 text-center">
+              <div>Games</div>
               <div>Win%</div>
-              <div>IMP</div>
             </div>
-            <div className="flex-shrink-0" style={{ width: '24px' }}>
-              {/* Remove button space */}
-            </div>
+            <div className="flex-shrink-0" style={{ width: '24px' }} />
           </div>
 
           {/* Scrollable Hero Rows */}
@@ -251,7 +241,18 @@ export function ManualHeroManager({ team, players, onClose, onUpdate, embedded =
   const loadPlayerStats = async () => {
     const statsMap = new Map<string, HeroStats[]>();
     for (const steamId of team.playerIds) {
-      const stats = await getHeroStats(steamId);
+      const matches = await getPlayerMatches(steamId);
+      // Aggregate matches into hero stats
+      const heroMap = new Map<number, { games: number; wins: number }>();
+      for (const match of matches) {
+        let s = heroMap.get(match.heroId);
+        if (!s) { s = { games: 0, wins: 0 }; heroMap.set(match.heroId, s); }
+        s.games++;
+        if (match.isWin) s.wins++;
+      }
+      const stats: HeroStats[] = Array.from(heroMap.entries()).map(([heroId, s]) => ({
+        steamId, heroId, games: s.games, wins: s.wins, avgImp: 0,
+      }));
       statsMap.set(steamId, stats);
     }
     setPlayerStats(statsMap);

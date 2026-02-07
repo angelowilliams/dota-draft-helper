@@ -1,12 +1,12 @@
 import { db } from '@/db/database';
-import type { Team, Player, HeroStats, Match, Hero } from '@/types';
+import type { Team, Player, Match, Hero, PlayerMatch } from '@/types';
 
 export interface ExportData {
   version: number;
   exportedAt: string;
   teams: Team[];
   players: Player[];
-  heroStats: HeroStats[];
+  playerMatches: PlayerMatch[];
   matches: Match[];
   heroes: Hero[];
 }
@@ -15,20 +15,20 @@ export interface ExportData {
  * Export all data from IndexedDB as a JSON file
  */
 export async function exportAllData(): Promise<void> {
-  const [teams, players, heroStats, matches, heroes] = await Promise.all([
+  const [teams, players, playerMatches, matches, heroes] = await Promise.all([
     db.teams.toArray(),
     db.players.toArray(),
-    db.heroStats.toArray(),
+    db.playerMatches.toArray(),
     db.matches.toArray(),
     db.heroes.toArray(),
   ]);
 
   const exportData: ExportData = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     teams,
     players,
-    heroStats,
+    playerMatches,
     matches,
     heroes,
   };
@@ -63,16 +63,17 @@ export async function importAllData(file: File): Promise<void> {
   await Promise.all([
     db.teams.clear(),
     db.players.clear(),
-    db.heroStats.clear(),
+    db.playerMatches.clear(),
     db.matches.clear(),
     db.heroes.clear(),
   ]);
 
   // Import new data
+  const playerMatches = data.playerMatches || [];
   await Promise.all([
     data.teams.length > 0 ? db.teams.bulkAdd(data.teams) : Promise.resolve(),
     data.players.length > 0 ? db.players.bulkAdd(data.players) : Promise.resolve(),
-    data.heroStats.length > 0 ? db.heroStats.bulkAdd(data.heroStats) : Promise.resolve(),
+    playerMatches.length > 0 ? db.playerMatches.bulkAdd(playerMatches) : Promise.resolve(),
     data.matches.length > 0 ? db.matches.bulkAdd(data.matches) : Promise.resolve(),
     data.heroes.length > 0 ? db.heroes.bulkAdd(data.heroes) : Promise.resolve(),
   ]);

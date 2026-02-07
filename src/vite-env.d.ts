@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_STRATZ_API_TOKEN: string;
+  readonly VITE_OPENDOTA_API_KEY: string;
 }
 
 interface ImportMeta {

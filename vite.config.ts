@@ -16,4 +16,13 @@ export default defineConfig({
       '@/config': path.resolve(__dirname, './src/config'),
     },
   },
+  server: {
+    proxy: {
+      '/api/ad2l': {
+        target: 'https://dota.playon.gg',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ad2l/, ''),
+      },
+    },
+  },
 })

@@ -108,7 +108,7 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
             <LobbyTypeToggle value={lobbyTypeFilter} onChange={setLobbyTypeFilter} />
             <p className="text-xs text-dota-text-muted mt-1">
               {lobbyTypeFilter === 'competitive'
-                ? 'Tournament/league only'
+                ? 'Practice lobbies + tournament only'
                 : 'All types (excludes Turbo)'}
             </p>
           </div>
@@ -131,12 +131,6 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
             </p>
           </div>
 
-          {/* Info */}
-          <div className="flex items-center">
-            <p className="text-xs text-dota-text-muted">
-              Data is fetched from the past year and filtered locally for fast switching between time periods.
-            </p>
-          </div>
         </div>
       </div>
 
@@ -176,7 +170,7 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
         <div className="card bg-dire bg-opacity-20 border-dire">
           <p className="text-dire">Error: {error}</p>
           <p className="text-sm text-dota-text-secondary mt-2">
-            Check your STRATZ API token and try again.
+            Check your OpenDota API key and try again.
           </p>
         </div>
       )}
@@ -190,7 +184,7 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
         <div className="card text-center py-8 text-dota-text-secondary">
           <p className="mb-2">No data available</p>
           <p className="text-sm text-dota-text-muted">
-            Click "Refresh Data" to fetch player statistics from STRATZ
+            Click "Refresh Data" to fetch player statistics from OpenDota
           </p>
         </div>
       ) : (

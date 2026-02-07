@@ -21,14 +21,6 @@ export async function updateTeam(id: string, updates: Partial<Omit<Team, 'id' | 
 
 export async function deleteTeam(id: string): Promise<void> {
   await db.teams.delete(id);
-
-  // Also delete associated player data
-  const team = await db.teams.get(id);
-  if (team) {
-    for (const steamId of team.playerIds) {
-      await db.heroStats.where('steamId').equals(steamId).delete();
-    }
-  }
 }
 
 export async function getTeam(id: string): Promise<Team | undefined> {

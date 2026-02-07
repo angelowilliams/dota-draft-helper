@@ -62,7 +62,7 @@ export function mergeHeroStatsWithMetadata(
       return {
         hero,
         stat,
-        totalGames: stat.pubGames + stat.competitiveGames,
+        totalGames: stat.games,
       };
     })
     .filter((item): item is HeroWithStats => item !== null);
@@ -89,13 +89,11 @@ export function createHeroWithStatsFromManualList(
     stat: stat || {
       steamId,
       heroId,
-      lobbyTypeFilter: 'all',
-      pubGames: 0,
-      competitiveGames: 0,
+      games: 0,
       wins: 0,
       avgImp: 0,
     },
-    totalGames: stat ? stat.pubGames + stat.competitiveGames : 0,
+    totalGames: stat ? stat.games : 0,
   };
 }
 

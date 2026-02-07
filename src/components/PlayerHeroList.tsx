@@ -28,31 +28,23 @@ export function PlayerHeroList({
 
     return heroStats
       .map((stat) => {
-        if (!stat || typeof stat.heroId !== 'number') {
-          return null;
-        }
+        if (!stat || typeof stat.heroId !== 'number') return null;
 
         const hero = heroes.find((h) => h.id === stat.heroId);
         if (!hero) return null;
 
-        // Apply search filter (prefix match only)
         if (searchFilter) {
           const lowerSearch = searchFilter.toLowerCase();
-          const matchesDisplayName = hero.displayName.toLowerCase().startsWith(lowerSearch);
-          const matchesName = hero.name.toLowerCase().startsWith(lowerSearch);
-          if (!matchesDisplayName && !matchesName) {
+          if (!hero.displayName.toLowerCase().startsWith(lowerSearch) &&
+              !hero.name.toLowerCase().startsWith(lowerSearch)) {
             return null;
           }
         }
 
-        return {
-          hero,
-          stat,
-          totalGames: stat.pubGames + stat.competitiveGames,
-        };
+        return { hero, stat };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
-      .sort((a, b) => b.totalGames - a.totalGames);
+      .sort((a, b) => b.stat.games - a.stat.games);
   }, [heroStats, heroes, searchFilter]);
 
   return (
@@ -60,7 +52,7 @@ export function PlayerHeroList({
       <div className="mb-4">
         <h3 className="text-base font-semibold">
           <a
-            href={`https://stratz.com/players/${steamId}`}
+            href={`https://www.opendota.com/players/${steamId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-radiant hover:text-radiant-light transition-colors"
@@ -80,20 +72,16 @@ export function PlayerHeroList({
         <div>
           {/* Header Row */}
           <div className="flex items-center gap-2 pb-2 border-b border-dota-bg-tertiary text-xs font-medium text-dota-text-muted">
-            <div className="flex-shrink-0" style={{ width: '48px' }}>
-              {/* Hero image space */}
-            </div>
-            <div className="flex-1 grid grid-cols-4 gap-2 text-center">
-              <div>Total</div>
-              <div>Comp</div>
+            <div className="flex-shrink-0" style={{ width: '48px' }} />
+            <div className="flex-1 grid grid-cols-2 gap-2 text-center">
+              <div>Games</div>
               <div>Win%</div>
-              <div>IMP</div>
             </div>
           </div>
 
           {/* Scrollable Hero Rows */}
           <div className="space-y-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: '580px' }}>
-            {filteredAndSortedHeroes.map(({ hero, stat, totalGames }) => (
+            {filteredAndSortedHeroes.map(({ hero, stat }) => (
               <div
                 key={hero.id}
                 className="flex items-center gap-2 p-1 rounded hover:bg-dota-bg-tertiary transition-colors"
@@ -105,16 +93,12 @@ export function PlayerHeroList({
                   className="rounded flex-shrink-0"
                   style={{ width: 'auto', height: 'auto', maxWidth: '48px' }}
                 />
-                <div className="flex-1 grid grid-cols-4 gap-2 text-xs text-center">
-                  <div className="font-medium text-dota-text-primary">{totalGames}</div>
-                  <div className="text-radiant font-medium">{stat.competitiveGames}</div>
+                <div className="flex-1 grid grid-cols-2 gap-2 text-xs text-center">
+                  <div className="font-medium text-dota-text-primary">{stat.games}</div>
                   <div className="text-dota-text-secondary">
-                    {stat.wins !== undefined && totalGames > 0
-                      ? `${Math.round((stat.wins / totalGames) * 100)}%`
+                    {stat.games > 0
+                      ? `${Math.round((stat.wins / stat.games) * 100)}%`
                       : '-'}
-                  </div>
-                  <div className="text-dota-text-secondary">
-                    {stat.avgImp !== undefined ? stat.avgImp.toFixed(0) : '-'}
                   </div>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 {
   "name": "dev-server",
   "description": "Start the Vite development server",
-  "instructions": "Starts the local development server with hot module replacement (HMR). The application will be available at http://localhost:5173\n\nPrerequisites:\n- Dependencies installed (npm install)\n- .env file configured with STRATZ API token\n- Hero portraits fetched (npm run fetch-heroes)\n\nThe server will:\n- Watch for file changes and auto-reload\n- Display build errors in the browser\n- Enable React DevTools\n\nPress Ctrl+C to stop the server.",
+  "instructions": "Starts the local development server with hot module replacement (HMR). The application will be available at http://localhost:5173\n\nPrerequisites:\n- Dependencies installed (npm install)\n- .env file configured with OpenDota API key\n- Hero portraits fetched (npm run fetch-heroes)\n\nThe server will:\n- Watch for file changes and auto-reload\n- Display build errors in the browser\n- Enable React DevTools\n\nPress Ctrl+C to stop the server.",
   "actions": [
     {
       "type": "bash",

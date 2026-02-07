@@ -1,4 +1,4 @@
-import { getStratzClient } from './stratz';
+import { opendotaFetch } from './opendota';
 
 export interface TeamInfo {
   id: number;
@@ -7,32 +7,26 @@ export interface TeamInfo {
   logo?: string;
 }
 
+interface OpenDotaTeamResponse {
+  team_id: number;
+  name: string;
+  tag: string;
+  logo_url: string;
+}
+
 export async function fetchTeamInfo(teamId: number): Promise<TeamInfo | null> {
-  const client = getStratzClient();
-
-  const query = `
-    query GetTeam($teamId: Int!) {
-      team(teamId: $teamId) {
-        id
-        name
-        tag
-        logo
-      }
-    }
-  `;
-
   try {
-    const data: any = await client.request(query, { teamId });
+    const data = await opendotaFetch<OpenDotaTeamResponse>(`/teams/${teamId}`);
 
-    if (!data.team) {
+    if (!data || !data.name) {
       return null;
     }
 
     return {
-      id: data.team.id,
-      name: data.team.name,
-      tag: data.team.tag,
-      logo: data.team.logo,
+      id: data.team_id,
+      name: data.name,
+      tag: data.tag,
+      logo: data.logo_url,
     };
   } catch (error) {
     console.error('Failed to fetch team info:', error);

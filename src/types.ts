@@ -4,8 +4,8 @@ export interface Team {
   id: string; // UUID generated locally
   name: string;
   playerIds: string[]; // Array of 5 Steam IDs
-  teamId?: string; // Optional STRATZ team ID for competitive tracking
-  teamLogo?: string; // Team logo URL from STRATZ
+  teamId?: string; // Optional team ID for competitive tracking
+  teamLogo?: string; // Team logo URL
   yourTeam?: number; // Flag for "Your Team" (1 = true, undefined = false)
   manualHeroLists?: number[][]; // 5 arrays of hero IDs, one per player (ordered)
   createdAt: Date;
@@ -29,19 +29,16 @@ export interface PlayerMatch {
   heroId: number;
   isWin: boolean;
   imp: number | null;
-  lobbyType: number; // 0=unranked, 1=competitive, 7=ranked
+  lobbyType: number; // 0=normal, 1=practice, 2=tournament, 7=ranked
   startDateTime: number; // Unix timestamp (seconds)
 }
 
 export interface HeroStats {
   steamId: string;
   heroId: number;
-  lobbyTypeFilter: LobbyTypeFilter; // Which filter was used when fetching this data
-  pubGames: number;
-  competitiveGames: number;
-  wins?: number;
-  avgImp?: number;
-  lastPlayed?: Date;
+  games: number;
+  wins: number;
+  avgImp: number;
 }
 
 export interface Match {
@@ -96,30 +93,28 @@ export interface DraftState {
   currentPhase: DraftPhase;
 }
 
-// STRATZ API response types
-export interface StratzPlayer {
-  steamAccount: {
-    id: string;
-    name: string;
-    avatar: string;
-    proSteamAccount?: {
-      name: string;
-    };
+// OpenDota API response types
+export interface OpenDotaPlayer {
+  profile: {
+    account_id: number;
+    personaname: string;
+    name: string | null; // Pro player name
+    avatarfull: string;
   };
 }
 
-export interface StratzMatch {
-  id: string;
-  startDateTime: number;
-  didRadiantWin: boolean;
+export interface OpenDotaMatch {
+  match_id: number;
+  start_time: number;
+  radiant_win: boolean;
   league?: {
-    id: number;
-    displayName: string;
+    leagueid: number;
+    name: string;
   };
-  pickBans?: Array<{
-    heroId: number;
-    isPick: boolean;
-    isRadiant: boolean;
+  picks_bans?: Array<{
+    hero_id: number;
+    is_pick: boolean;
+    team: number; // 0 = radiant, 1 = dire
     order: number;
   }>;
 }

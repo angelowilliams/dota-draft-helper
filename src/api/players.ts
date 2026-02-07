@@ -1,124 +1,120 @@
-import { getStratzClient, normalizeToSteam32 } from './stratz';
-import { stratzRateLimiter } from './rateLimiter';
-import type { StratzPlayer, HeroStats, LobbyTypeFilter, PlayerMatch } from '@/types';
+import { opendotaFetch, normalizeToSteam32 } from './opendota';
+import type { OpenDotaPlayer, PlayerMatch } from '@/types';
+
+/**
+ * Minimal match info from the player matches endpoint (for team detection).
+ */
+export interface PlayerMatchSummary {
+  match_id: number;
+  player_slot: number;
+}
+
+/**
+ * Fetch recent practice lobby matches for a player (lobby_type=1).
+ * Used as a fallback for team detection via match details.
+ */
+export async function fetchPlayerRecentLobbyMatches(
+  steam32Id: string,
+  limit = 5
+): Promise<PlayerMatchSummary[]> {
+  return opendotaFetch<PlayerMatchSummary[]>(
+    `/players/${steam32Id}/matches?limit=${limit}&lobby_type=1`
+  );
+}
 
 const MAX_MATCHES = 500;
-const BATCH_SIZE = 100; // STRATZ API limit per query
-const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
+const BATCH_SIZE = 100; // OpenDota API limit per request
+
+// Valid game modes (exclude Turbo = 23)
+const VALID_GAME_MODES = [1, 2, 3, 4, 5, 10, 16, 22];
 
 interface FetchPlayerMatchesResult {
-  player: StratzPlayer;
+  player: OpenDotaPlayer;
   matches: PlayerMatch[];
   totalFetched: number;
 }
 
 /**
+ * Fetch player profile info from OpenDota.
+ */
+async function fetchPlayerProfile(steam32Id: string): Promise<OpenDotaPlayer> {
+  return opendotaFetch<OpenDotaPlayer>(`/players/${steam32Id}`);
+}
+
+/**
+ * OpenDota match response shape (subset of fields we use).
+ */
+interface OpenDotaMatchResponse {
+  match_id: number;
+  player_slot: number;
+  radiant_win: boolean;
+  hero_id: number;
+  start_time: number;
+  lobby_type: number;
+  game_mode: number;
+}
+
+/**
  * Fetches up to MAX_MATCHES (500) games from the past year for a player.
- * Uses pagination to fetch all available matches within the time window.
+ * Uses offset-based pagination.
  */
 export async function fetchPlayerMatches(
   steamId: string
 ): Promise<FetchPlayerMatchesResult> {
-  const client = getStratzClient();
-  const steam32Id = normalizeToSteam32(steamId);
+  const steam32Id = String(normalizeToSteam32(steamId));
 
-  const oneYearAgo = Math.floor(Date.now() / 1000) - ONE_YEAR_SECONDS;
+  // Fetch player profile
+  const player = await fetchPlayerProfile(steam32Id);
 
-  const query = `
-    query GetPlayerMatches($steamId: Long!, $matchRequest: PlayerMatchesRequestType!) {
-      player(steamAccountId: $steamId) {
-        steamAccount {
-          id
-          name
-          avatar
-          proSteamAccount {
-            name
-          }
-        }
-        matches(request: $matchRequest) {
-          id
-          startDateTime
-          didRadiantWin
-          lobbyType
-          players(steamAccountId: $steamId) {
-            isRadiant
-            heroId
-            imp
-          }
-        }
-      }
-    }
-  `;
+  if (!player || !player.profile) {
+    throw new Error(`Player not found: ${steamId}`);
+  }
 
   const allMatches: PlayerMatch[] = [];
-  let skip = 0;
+  let offset = 0;
   let hasMore = true;
-  let player: StratzPlayer | null = null;
 
   while (hasMore && allMatches.length < MAX_MATCHES) {
-    const matchRequest = {
-      gameModeIds: [1, 2, 3, 4, 5, 10, 16, 22], // Exclude Turbo
-      take: BATCH_SIZE,
-      skip,
-      startDateTime: oneYearAgo,
-    };
-
     try {
-      // Wait for rate limiter before making request
-      await stratzRateLimiter.throttle();
+      const matches = await opendotaFetch<OpenDotaMatchResponse[]>(
+        `/players/${steam32Id}/matches?limit=${BATCH_SIZE}&offset=${offset}&date=365&significant=0`
+      );
 
-      const data: any = await client.request(query, {
-        steamId: steam32Id,
-        matchRequest,
-      });
-
-      if (!data?.player?.steamAccount) {
-        throw new Error(`Player not found: ${steamId}`);
-      }
-
-      if (!player) {
-        player = data.player;
-      }
-
-      const matches = data.player.matches || [];
-
-      if (matches.length === 0) {
+      if (!matches || matches.length === 0) {
         hasMore = false;
         break;
       }
 
       for (const match of matches) {
         if (allMatches.length >= MAX_MATCHES) break;
-        if (!match.players?.[0]?.heroId) continue;
 
-        const playerData = match.players[0];
-        const didWin = match.didRadiantWin === playerData.isRadiant;
+        // Filter out invalid game modes (Turbo etc.)
+        if (!VALID_GAME_MODES.includes(match.game_mode)) continue;
+
+        // player_slot < 128 means radiant side
+        const isRadiant = match.player_slot < 128;
+        const didWin = isRadiant === match.radiant_win;
 
         allMatches.push({
-          matchId: String(match.id),
+          matchId: String(match.match_id),
           steamId,
-          heroId: playerData.heroId,
+          heroId: match.hero_id,
           isWin: didWin,
-          imp: playerData.imp ?? null,
-          lobbyType: match.lobbyType ?? 0,
-          startDateTime: match.startDateTime,
+          imp: null, // Not available in OpenDota
+          lobbyType: match.lobby_type ?? 0,
+          startDateTime: match.start_time,
         });
       }
 
-      skip += BATCH_SIZE;
+      offset += BATCH_SIZE;
 
-      // If we got fewer than BATCH_SIZE, there are no more matches
       if (matches.length < BATCH_SIZE) {
         hasMore = false;
       }
     } catch (error) {
-      console.error(`Failed to fetch matches for ${steamId} at skip=${skip}:`, error);
+      console.error(`Failed to fetch matches for ${steamId} at offset=${offset}:`, error);
       throw error;
     }
-  }
-
-  if (!player) {
-    throw new Error(`Player not found: ${steamId}`);
   }
 
   return {
@@ -126,174 +122,4 @@ export async function fetchPlayerMatches(
     matches: allMatches,
     totalFetched: allMatches.length,
   };
-}
-
-interface FetchPlayerHeroesParams {
-  steamId: string;
-  lobbyTypeFilter?: LobbyTypeFilter;
-}
-
-export async function fetchPlayerHeroes(
-  params: FetchPlayerHeroesParams
-): Promise<{ player: StratzPlayer; heroStats: HeroStats[] }> {
-  const client = getStratzClient();
-  const steam32Id = normalizeToSteam32(params.steamId);
-  const lobbyTypeFilter = params.lobbyTypeFilter || 'all';
-
-  // Build match request based on filter
-  const matchRequest: any = {
-    gameModeIds: [1, 2, 3, 4, 5, 10, 16, 22],
-    take: 100,
-  };
-
-  // Set lobby type filter
-  // Only filter by lobby type when competitive-only is selected
-  // For 'all', don't specify lobbyTypeIds - let STRATZ return all matches
-  if (lobbyTypeFilter === 'competitive') {
-    matchRequest.lobbyTypeIds = [1];
-  }
-
-  const query = `
-    query GetPlayerHeroes($steamId: Long!, $matchRequest: PlayerMatchesRequestType!) {
-      player(steamAccountId: $steamId) {
-        steamAccount {
-          id
-          name
-          avatar
-          proSteamAccount {
-            name
-          }
-        }
-        matches(request: $matchRequest) {
-          id
-          didRadiantWin
-          gameMode
-          lobbyType
-          players(steamAccountId: $steamId) {
-            isRadiant
-            heroId
-            imp
-          }
-        }
-      }
-    }
-  `;
-
-  try {
-    const data: any = await client.request(query, {
-      steamId: steam32Id,
-      matchRequest,
-    });
-
-    if (!data || !data.player) {
-      throw new Error(`Player not found: ${params.steamId}`);
-    }
-
-    if (!data.player.steamAccount) {
-      throw new Error(`Invalid player data for: ${params.steamId}`);
-    }
-
-    // Aggregate match data by hero
-    const heroStatsMap = new Map<
-      number,
-      {
-        pubGames: number;
-        compGames: number;
-        wins: number;
-        impSum: number;
-        totalGames: number;
-      }
-    >();
-
-    data.player.matches?.forEach((match: any) => {
-      if (!match.players || match.players.length === 0) return;
-
-      const playerData = match.players[0];
-      const heroId = playerData.heroId;
-
-      if (!heroId) return;
-
-      // Determine if this is a competitive match (lobby type 1 = tournament/league)
-      const isCompetitive = match.lobbyType === 1;
-
-      // Determine if player won
-      const didWin = match.didRadiantWin === playerData.isRadiant;
-
-      // Get or create hero stats entry
-      let stats = heroStatsMap.get(heroId);
-      if (!stats) {
-        stats = {
-          pubGames: 0,
-          compGames: 0,
-          wins: 0,
-          impSum: 0,
-          totalGames: 0,
-        };
-        heroStatsMap.set(heroId, stats);
-      }
-
-      // Update stats
-      stats.totalGames++;
-      if (isCompetitive) {
-        stats.compGames++;
-      } else {
-        stats.pubGames++;
-      }
-      if (didWin) {
-        stats.wins++;
-      }
-      if (playerData.imp) {
-        stats.impSum += playerData.imp;
-      }
-    });
-
-    // Build final hero stats
-    const heroStats: HeroStats[] = Array.from(heroStatsMap.entries())
-      .map(([heroId, stats]) => ({
-        steamId: params.steamId,
-        heroId,
-        lobbyTypeFilter,
-        pubGames: stats.pubGames,
-        competitiveGames: stats.compGames,
-        wins: stats.wins,
-        avgImp: stats.totalGames > 0 ? stats.impSum / stats.totalGames : 0,
-        lastPlayed: new Date(),
-      }))
-      .filter((stat) => stat.pubGames > 0 || stat.competitiveGames > 0);
-
-    return {
-      player: data.player,
-      heroStats,
-    };
-  } catch (error) {
-    console.error('Failed to fetch player heroes:', error);
-    throw error;
-  }
-}
-
-export async function fetchMultiplePlayerHeroes(
-  steamIds: string[]
-): Promise<Map<string, HeroStats[]>> {
-  const results = new Map<string, HeroStats[]>();
-
-  // Fetch all players in parallel
-  const promises = steamIds.map(async (steamId) => {
-    try {
-      const { heroStats } = await fetchPlayerHeroes({
-        steamId,
-      });
-      return { steamId, heroStats };
-    } catch (error) {
-      console.error(`Failed to fetch data for player ${steamId}:`, error);
-      return { steamId, heroStats: [] };
-    }
-  });
-
-  const responses = await Promise.all(promises);
-
-  responses.forEach(({ steamId, heroStats }) => {
-    results.set(steamId, heroStats);
-  });
-
-  return results;
 }

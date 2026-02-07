@@ -20,9 +20,9 @@ const mockHeroes: Hero[] = [
 ];
 
 const mockStats: HeroStats[] = [
-  { steamId: '123', heroId: 1, lobbyTypeFilter: 'all', pubGames: 50, competitiveGames: 10, wins: 35, avgImp: 100 },
-  { steamId: '123', heroId: 2, lobbyTypeFilter: 'all', pubGames: 30, competitiveGames: 20, wins: 30, avgImp: 120 },
-  { steamId: '123', heroId: 3, lobbyTypeFilter: 'all', pubGames: 100, competitiveGames: 0, wins: 60, avgImp: 80 },
+  { steamId: '123', heroId: 1, games: 60, wins: 35, avgImp: 100 },
+  { steamId: '123', heroId: 2, games: 50, wins: 30, avgImp: 120 },
+  { steamId: '123', heroId: 3, games: 100, wins: 60, avgImp: 80 },
 ];
 
 describe('heroStats', () => {
@@ -151,22 +151,22 @@ describe('heroStats', () => {
 
       expect(result).toHaveLength(3);
       expect(result[0].hero.displayName).toBe('Anti-Mage');
-      expect(result[0].stat.pubGames).toBe(50);
+      expect(result[0].stat.games).toBe(60);
       expect(result[0].totalGames).toBe(60);
     });
 
     it('calculates totalGames correctly', () => {
       const result = mergeHeroStatsWithMetadata(mockStats, mockHeroes);
 
-      expect(result[0].totalGames).toBe(60); // 50 + 10
-      expect(result[1].totalGames).toBe(50); // 30 + 20
-      expect(result[2].totalGames).toBe(100); // 100 + 0
+      expect(result[0].totalGames).toBe(60);
+      expect(result[1].totalGames).toBe(50);
+      expect(result[2].totalGames).toBe(100);
     });
 
     it('filters out stats with no matching hero', () => {
       const statsWithUnknown: HeroStats[] = [
         ...mockStats,
-        { steamId: '123', heroId: 999, lobbyTypeFilter: 'all', pubGames: 10, competitiveGames: 5 },
+        { steamId: '123', heroId: 999, games: 15, wins: 5, avgImp: 0 },
       ];
 
       const result = mergeHeroStatsWithMetadata(statsWithUnknown, mockHeroes);
@@ -189,7 +189,7 @@ describe('heroStats', () => {
     it('filters out invalid stats entries', () => {
       const statsWithInvalid = [
         ...mockStats,
-        { steamId: '123', heroId: null as unknown as number, lobbyTypeFilter: 'all' as const, pubGames: 10, competitiveGames: 5 },
+        { steamId: '123', heroId: null as unknown as number, games: 15, wins: 5, avgImp: 0 },
       ];
 
       const result = mergeHeroStatsWithMetadata(statsWithInvalid, mockHeroes);
@@ -210,7 +210,7 @@ describe('heroStats', () => {
       const result = createHeroWithStatsFromManualList(1, '123', mockHeroes, mockStats);
 
       expect(result).not.toBeNull();
-      expect(result!.stat.pubGames).toBe(50);
+      expect(result!.stat.games).toBe(60);
       expect(result!.totalGames).toBe(60);
     });
 
@@ -223,8 +223,7 @@ describe('heroStats', () => {
       const result = createHeroWithStatsFromManualList(4, '123', mockHeroes); // Bloodseeker - no stats
 
       expect(result).not.toBeNull();
-      expect(result!.stat.pubGames).toBe(0);
-      expect(result!.stat.competitiveGames).toBe(0);
+      expect(result!.stat.games).toBe(0);
       expect(result!.stat.wins).toBe(0);
       expect(result!.stat.avgImp).toBe(0);
     });

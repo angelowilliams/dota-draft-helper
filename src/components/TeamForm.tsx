@@ -228,7 +228,7 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
                 }
               }}
               className="input-field w-full"
-              placeholder="Enter STRATZ team ID (optional)"
+              placeholder="Enter team ID (optional)"
             />
             <p className="text-dota-text-muted text-xs mt-1">
               Used for fetching competitive match history
@@ -270,7 +270,7 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
               <p className="text-dire text-sm mt-1">{errors.playerIds}</p>
             )}
             <p className="text-dota-text-muted text-xs mt-2">
-              Use the Steam ID from your STRATZ profile URL (stratz.com/players/YOUR_ID) or find it at{' '}
+              Use the Steam ID from your OpenDota profile URL (opendota.com/players/YOUR_ID) or find it at{' '}
               <a
                 href="https://www.steamid.io/"
                 target="_blank"

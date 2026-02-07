@@ -1,5 +1,8 @@
-import { useState } from 'react';
-import { X, Download, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Download, AlertCircle, Loader2, Check } from 'lucide-react';
+import { normalizeToSteam32 } from '@/utils/steamId';
+import { detectTeamsForPlayers } from '@/services/teamDetection';
+import type { CandidateTeam } from '@/services/teamDetection';
 import type { Team } from '@/types';
 
 interface AD2LImportModalProps {
@@ -18,16 +21,49 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
     playerIds: string[];
   } | null>(null);
 
+  // Team detection state
+  const [teamCandidates, setTeamCandidates] = useState<CandidateTeam[]>([]);
+  const [teamDetectionStatus, setTeamDetectionStatus] = useState<
+    'idle' | 'loading' | 'found' | 'none' | 'error'
+  >('idle');
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+
+  // Auto-detect team when teamData is set
+  useEffect(() => {
+    if (!teamData || teamData.playerIds.length === 0) return;
+
+    let cancelled = false;
+    setTeamDetectionStatus('loading');
+    setTeamCandidates([]);
+    setSelectedTeamId(null);
+
+    detectTeamsForPlayers(teamData.playerIds).then((result) => {
+      if (cancelled) return;
+
+      setTeamCandidates(result.candidates);
+      setTeamDetectionStatus(result.status === 'error' ? 'error' : result.candidates.length > 0 ? 'found' : 'none');
+
+      // Auto-select top candidate if 3+ players match
+      if (result.candidates.length > 0 && result.candidates[0].matchingPlayers >= 3) {
+        setSelectedTeamId(result.candidates[0].teamId);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [teamData]);
+
   const parseAD2LPage = (html: string): { name: string; playerIds: string[] } => {
     // Create a temporary DOM element to parse HTML
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // Extract team name - look for the team header
+    // Extract team name - look for the team header (can be h1 or h2)
     let teamName = 'Imported Team';
-    const h1Elements = doc.querySelectorAll('h1');
-    for (const h1 of h1Elements) {
-      const text = h1.textContent?.trim();
+    const headings = doc.querySelectorAll('h1, h2');
+    for (const heading of headings) {
+      const text = heading.textContent?.trim();
       if (text && text.length > 0 && !text.includes('League') && !text.includes('Season')) {
         teamName = text;
         break;
@@ -77,11 +113,14 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
           steamId = steamProfileMatch[1]; // This is Steam64
         }
 
-        // If we found a Steam ID and haven't seen it yet, add it
-        if (steamId && !seenIds.has(steamId)) {
-          playerIds.push(steamId);
-          seenIds.add(steamId);
-          break; // Move to next container
+        // If we found a Steam ID, normalize to Steam32 and add if not duplicate
+        if (steamId) {
+          const steam32 = String(normalizeToSteam32(steamId));
+          if (!seenIds.has(steam32)) {
+            playerIds.push(steam32);
+            seenIds.add(steam32);
+            break; // Move to next container
+          }
         }
       }
     });
@@ -100,11 +139,6 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
     if (parsed.playerIds.length > 5) {
       // Limit to first 5 players
       parsed.playerIds = parsed.playerIds.slice(0, 5);
-    } else if (parsed.playerIds.length < 5) {
-      // Pad with empty strings
-      while (parsed.playerIds.length < 5) {
-        parsed.playerIds.push('');
-      }
     }
 
     setTeamData(parsed);
@@ -126,8 +160,10 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
     setError(null);
 
     try {
-      // Try to fetch with mode: 'cors' to see if CORS is allowed
-      const response = await fetch(url, { mode: 'cors' });
+      // Extract the path from the AD2L URL and proxy through Vite dev server
+      const urlObj = new URL(url);
+      const proxyUrl = `/api/ad2l${urlObj.pathname}`;
+      const response = await fetch(proxyUrl);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch team page: ${response.statusText}`);
@@ -137,15 +173,8 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
       processHtml(html);
     } catch (err) {
       console.error('Failed to import team:', err);
-
-      // Check if it's a CORS error
-      if (err instanceof TypeError && err.message.includes('CORS')) {
-        setError('CORS blocked the request. Please use the "Paste HTML" option below.');
-        setShowManualInput(true);
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to fetch. Try using "Paste HTML" instead.');
-        setShowManualInput(true);
-      }
+      setError(err instanceof Error ? err.message : 'Failed to fetch. Try using "Paste HTML" instead.');
+      setShowManualInput(true);
     } finally {
       setLoading(false);
     }
@@ -168,11 +197,23 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
       await onImport({
         name: teamData.name,
         playerIds: teamData.playerIds,
+        ...(selectedTeamId != null && { teamId: String(selectedTeamId) }),
       });
       onCancel();
     } catch (err) {
-      setError('Failed to create team');
+      console.error('Failed to create team:', err);
+      setError(err instanceof Error ? `Failed to create team: ${err.message}` : 'Failed to create team');
     }
+  };
+
+  const handleReset = () => {
+    setTeamData(null);
+    setManualHtml('');
+    setShowManualInput(false);
+    setError(null);
+    setTeamCandidates([]);
+    setTeamDetectionStatus('idle');
+    setSelectedTeamId(null);
   };
 
   return (
@@ -288,7 +329,7 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
                   </div>
                   <div>
                     <span className="text-sm text-dota-text-secondary">Players Found: </span>
-                    <span className="font-medium">{teamData.playerIds.filter(id => id).length} / 5</span>
+                    <span className="font-medium">{teamData.playerIds.length} / 5</span>
                   </div>
                   <div className="mt-3">
                     <span className="text-sm text-dota-text-secondary block mb-1">Steam IDs:</span>
@@ -303,14 +344,84 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
                 </div>
               </div>
 
+              {/* Team Detection Section */}
+              <div className="bg-dota-bg-tertiary rounded p-4">
+                <h4 className="font-semibold mb-2">OpenDota Team ID</h4>
+
+                {teamDetectionStatus === 'loading' && (
+                  <div className="flex items-center gap-2 text-sm text-dota-text-secondary">
+                    <Loader2 size={16} className="animate-spin" />
+                    Detecting OpenDota team ID...
+                  </div>
+                )}
+
+                {teamDetectionStatus === 'found' && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-dota-text-muted mb-2">
+                      Select a team to link (enables logo and competitive match history):
+                    </p>
+                    {teamCandidates.map((candidate) => (
+                      <button
+                        key={candidate.teamId}
+                        onClick={() =>
+                          setSelectedTeamId(
+                            selectedTeamId === candidate.teamId ? null : candidate.teamId
+                          )
+                        }
+                        className={`w-full flex items-center gap-3 p-2 rounded border transition-colors ${
+                          selectedTeamId === candidate.teamId
+                            ? 'border-radiant bg-radiant/10'
+                            : 'border-dota-border hover:border-dota-text-secondary'
+                        }`}
+                      >
+                        {candidate.logoUrl ? (
+                          <img
+                            src={candidate.logoUrl}
+                            alt={candidate.name}
+                            className="w-8 h-8 object-contain"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 bg-dota-bg-secondary rounded flex items-center justify-center text-xs text-dota-text-muted">
+                            ?
+                          </div>
+                        )}
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-medium">
+                            {candidate.name}
+                            {candidate.tag && (
+                              <span className="text-dota-text-secondary ml-1">
+                                [{candidate.tag}]
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-dota-text-muted">
+                            {candidate.matchingPlayers} player{candidate.matchingPlayers !== 1 ? 's' : ''} matched
+                          </div>
+                        </div>
+                        {selectedTeamId === candidate.teamId && (
+                          <Check size={16} className="text-radiant" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {teamDetectionStatus === 'none' && (
+                  <p className="text-xs text-dota-text-muted">
+                    No OpenDota team ID detected. You can add one manually later.
+                  </p>
+                )}
+
+                {teamDetectionStatus === 'error' && (
+                  <p className="text-xs text-dota-text-muted">
+                    Could not detect team ID. You can add one manually later.
+                  </p>
+                )}
+              </div>
+
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => {
-                    setTeamData(null);
-                    setManualHtml('');
-                    setShowManualInput(false);
-                    setError(null);
-                  }}
+                  onClick={handleReset}
                   className="btn-secondary"
                 >
                   Reset

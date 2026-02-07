@@ -1,10 +1,9 @@
 import Dexie, { Table } from 'dexie';
-import type { Team, Player, HeroStats, Match, Hero, PlayerMatch } from '../types';
+import type { Team, Player, Match, Hero, PlayerMatch } from '../types';
 
 export class DotaDraftDatabase extends Dexie {
   teams!: Table<Team, string>;
   players!: Table<Player, string>;
-  heroStats!: Table<HeroStats, [string, number, string]>;
   matches!: Table<Match, string>;
   heroes!: Table<Hero, number>;
   playerMatches!: Table<PlayerMatch, string>;
@@ -37,12 +36,11 @@ export class DotaDraftDatabase extends Dexie {
       heroes: 'id, name, displayName, shortName',
     });
 
-    // Version 4: Recreate heroStats with new primary key structure
-    // Add compound index for [steamId+lobbyTypeFilter] for efficient filtering
+    // Version 4: heroStats stays deleted (was deleted in v3)
+    // Previously recreated with new PK, but that causes UpgradeError on fresh DBs
     this.version(4).stores({
       teams: 'id, name, *playerIds, teamId, yourTeam, createdAt',
       players: 'steamId, name, lastUpdated',
-      heroStats: '[steamId+heroId+lobbyTypeFilter], [steamId+lobbyTypeFilter], steamId, heroId, lobbyTypeFilter, lastPlayed',
       matches: 'matchId, teamId, startDateTime, leagueId',
       heroes: 'id, name, displayName, shortName',
     });
@@ -53,7 +51,16 @@ export class DotaDraftDatabase extends Dexie {
     this.version(5).stores({
       teams: 'id, name, *playerIds, teamId, yourTeam, createdAt',
       players: 'steamId, name, lastUpdated',
-      heroStats: '[steamId+heroId+lobbyTypeFilter], [steamId+lobbyTypeFilter], steamId, heroId, lobbyTypeFilter, lastPlayed',
+      matches: 'matchId, teamId, startDateTime, leagueId',
+      heroes: 'id, name, displayName, shortName',
+      playerMatches: '[steamId+matchId], steamId, startDateTime, heroId, lobbyType',
+    });
+
+    // Version 6: Drop heroStats table (stats are now computed on-the-fly from playerMatches)
+    this.version(6).stores({
+      teams: 'id, name, *playerIds, teamId, yourTeam, createdAt',
+      players: 'steamId, name, lastUpdated',
+      heroStats: null,
       matches: 'matchId, teamId, startDateTime, leagueId',
       heroes: 'id, name, displayName, shortName',
       playerMatches: '[steamId+matchId], steamId, startDateTime, heroId, lobbyType',

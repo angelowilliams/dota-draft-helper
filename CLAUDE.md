@@ -2,19 +2,19 @@
 
 ## Overview
 
-Local-only Dota 2 draft helper. React 18 + TypeScript + Vite + Tailwind CSS + IndexedDB (Dexie.js) + STRATZ GraphQL API.
+Local-only Dota 2 draft helper. React 18 + TypeScript + Vite + Tailwind CSS + IndexedDB (Dexie.js) + OpenDota REST API.
 
 ## Architecture
 
 ```
-User Input → Component → Hook → Service → API/DB → STRATZ/IndexedDB
+User Input → Component → Hook → Service → API/DB → OpenDota/IndexedDB
                 ↓
           DraftContext (draft state)
           App.tsx (view, scouting team)
 ```
 
 **Key directories:**
-- `src/api/` - STRATZ GraphQL queries
+- `src/api/` - OpenDota REST API calls
 - `src/components/` - React components (18 total)
 - `src/contexts/` - DraftContext for draft state
 - `src/services/` - Pure business logic (heroStats, draft)
@@ -29,15 +29,15 @@ User Input → Component → Hook → Service → API/DB → STRATZ/IndexedDB
 |------|---------|------------------|
 | `src/contexts/DraftContext.tsx` | Draft state management | Yes |
 | `src/config/draftOrder.ts` | Captain's Mode sequence (24 actions) | Never |
-| `src/db/database.ts` | IndexedDB schema v5 | Version bump required |
-| `src/api/rateLimiter.ts` | STRATZ rate limiting (20/sec, 250/min) | Yes |
+| `src/db/database.ts` | IndexedDB schema v6 | Version bump required |
 | `src/types.ts` | Core interfaces | Affects many files |
 
-## STRATZ API Rules
+## OpenDota API Rules
 
 ```typescript
-// Required header
-headers: { 'User-Agent': 'STRATZ_API' }
+// API key passed via query parameter
+// Base URL: https://api.opendota.com/api
+import { opendotaFetch } from '@/api/opendota';
 
 // Steam ID format: Steam32 only (convert Steam64)
 import { normalizeToSteam32 } from '@/utils/steamId';
@@ -46,18 +46,14 @@ import { normalizeToSteam32 } from '@/utils/steamId';
 gameMode: [1, 2, 3, 4, 5, 10, 16, 22]
 
 // Limits
-take: 100  // Max games per query
-lobbyType: 1  // Competitive/tournament
-
-// Rate limits: 20/sec, 250/min
-// Always use stratzRateLimiter.throttle() before API calls
-import { stratzRateLimiter } from '@/api/rateLimiter';
-await stratzRateLimiter.throttle();
+limit: 100  // Max games per request
+// lobbyType: 0=normal, 1=practice, 2=tournament, 7=ranked
+// "Competitive" filter = lobbyType 1 (practice/inhouse) or 2 (tournament)
 ```
 
 ## Player Data Architecture
 
-Player match data is fetched from STRATZ and stored as raw matches in IndexedDB (`playerMatches` table). Hero stats are aggregated client-side based on filters.
+Player match data is fetched from OpenDota and stored as raw matches in IndexedDB (`playerMatches` table). Hero stats are aggregated client-side based on filters.
 
 - **Fetch**: Up to 500 games per player from past year (paginated, sequential)
 - **Store**: Raw `PlayerMatch` records in IndexedDB
@@ -103,14 +99,13 @@ This enables instant filter switching without re-fetching.
 - Hardcode draft order (use draftOrder.ts)
 - Use Steam64 directly in API calls
 - Assume Radiant = First Pick
-- Forget User-Agent header
 - Commit .env file
 
 ## Debugging
 
 | Issue | Solution |
 |-------|----------|
-| API 401/403 | Check .env token, User-Agent header |
+| API 401/403 | Check .env API key |
 | No player names | Click "Refresh Player Data" |
 | Hero portraits missing | Run `npm run fetch-heroes` |
 | Draft state lost | Check DraftContext usage |

@@ -11,7 +11,25 @@
       "Bash(node -e:*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:docs.opendota.com)",
+      "WebFetch(domain:api.opendota.com)",
+      "WebFetch(domain:www.opendota.com)",
+      "WebFetch(domain:documenter.getpostman.com)",
+      "WebFetch(domain:pyopendota.readthedocs.io)",
+      "WebFetch(domain:blog.opendota.com)",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(npm uninstall:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(python -c \" import sys, json data = json.load\\(sys.stdin\\) if data and len\\(data\\) > 0: print\\(json.dumps\\(data[0], indent=2\\)\\) print\\(''Fields:'', list\\(data[0].keys\\(\\)\\)\\) \")",
+      "Bash(python -c \" import sys, json data = json.load\\(sys.stdin\\) keys_of_interest = [''radiant_team_id'', ''dire_team_id'', ''radiant_team'', ''dire_team'', ''league''] for k in keys_of_interest: if k in data: print\\(f''{k}: {json.dumps\\(data[k]\\)}''\\) else: print\\(f''{k}: NOT PRESENT''\\) print\\(\\) print\\(''Top-level keys:'', sorted\\(data.keys\\(\\)\\)\\) \")",
+      "Bash(python -c \" import sys, json data = json.load\\(sys.stdin\\) if data: match_id = data[0][''match_id''] print\\(f''Match ID: {match_id}''\\) print\\(json.dumps\\(data[0], indent=2\\)\\) \")",
+      "Bash(python -c \" import sys, json data = json.load\\(sys.stdin\\) keys_of_interest = [''radiant_team_id'', ''dire_team_id'', ''radiant_team'', ''dire_team'', ''league'', ''leagueid''] for k in keys_of_interest: if k in data: print\\(f''{k}: {json.dumps\\(data[k]\\)}''\\) else: print\\(f''{k}: NOT PRESENT''\\) \")",
+      "Bash(python -c \" import sys, json data = json.load\\(sys.stdin\\) if data: print\\(f''Fields in match: {list\\(data[0].keys\\(\\)\\)}''\\) for m in data[:3]: print\\(json.dumps\\(m, indent=2\\)\\) else: print\\(''No matches''\\) \")",
+      "Bash(python -c:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(npx vitest run)"
     ]
   }
 }

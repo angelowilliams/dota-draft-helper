@@ -1,7 +1,7 @@
 {
   "name": "setup-project",
   "description": "Complete project setup with dependencies, environment, and hero data",
-  "instructions": "Sets up the Dota 2 Draft Helper project from scratch. This includes:\n1. Installing all npm dependencies\n2. Creating .env file from template (you'll need to add your STRATZ API token)\n3. Fetching hero portraits from STRATZ API\n\nPrerequisites:\n- Node.js 18+ installed\n- STRATZ API token (get from https://stratz.com/api)\n\nAfter running:\n1. Edit .env and add your STRATZ API token\n2. Run 'npm run dev' to start the development server",
+  "instructions": "Sets up the Dota 2 Draft Helper project from scratch. This includes:\n1. Installing all npm dependencies\n2. Creating .env file from template (you'll need to add your OpenDota API key)\n3. Fetching hero portraits\n\nPrerequisites:\n- Node.js 18+ installed\n- OpenDota API key (get from https://www.opendota.com/api-keys)\n\nAfter running:\n1. Edit .env and add your OpenDota API key\n2. Run 'npm run dev' to start the development server",
   "actions": [
     {
       "type": "bash",

@@ -71,7 +71,7 @@ export function YourTeamView() {
 
     try {
       await refetch();
-      toast.success('Player data refreshed from STRATZ');
+      toast.success('Player data refreshed from OpenDota');
     } catch (error) {
       toast.error('Failed to refresh player data');
     }

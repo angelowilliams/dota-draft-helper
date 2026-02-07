@@ -2,12 +2,16 @@
 
 ## Critical Patterns
 
-### STRATZ API
-- **MUST** include `'User-Agent': 'STRATZ_API'` header
+### OpenDota API
+- REST API with key passed via `?api_key=KEY` query parameter
+- Base URL: `https://api.opendota.com/api`
 - Steam32 IDs only - use `normalizeToSteam32()` from `@/utils/steamId`
-- Max 100 games per query (`take: 100`)
+- Max 100 games per request (`limit=100`)
 - Game modes: `[1, 2, 3, 4, 5, 10, 16, 22]` (excludes Turbo = 23)
 - Lobby type 1 = competitive/tournament
+- `imp` stat not available - always null
+- player_slot < 128 means radiant side
+- Rate limits: ~60/min with key, use `rateLimiter.throttle()` before calls
 
 ### Draft Order
 - 24 actions: 14 bans, 10 picks
@@ -23,7 +27,7 @@
 
 | Issue | Solution |
 |-------|----------|
-| API 401/403 | Check .env token, User-Agent header |
+| API 401/403 | Check .env API key |
 | Steam64 errors | Convert with `normalizeToSteam32()` |
 | Hero portraits broken | Run `npm run fetch-heroes` |
 | Draft state lost | Use `useDraft()` from DraftContext |
@@ -33,12 +37,12 @@
 - Hardcoding draft order
 - Using Steam64 in API calls
 - Assuming Radiant = First Pick
-- Forgetting User-Agent header
 - Committing .env file
 - Using localStorage for large data
 
 ## Recent Changes (Feb 2026)
 
+- **API Migration**: Switched from STRATZ GraphQL to OpenDota REST API
 - **Testing**: Vitest + 147 tests for utils, config, services
 - **Services Layer**: `src/services/heroStats.ts`, `src/services/draft.ts`
 - **DraftContext**: Replaced 17 props with context-based state
@@ -52,6 +56,6 @@
 
 ## Links
 
-- STRATZ API: https://docs.stratz.com/
+- OpenDota API: https://docs.opendota.com/
 - Dexie.js: https://dexie.org/
 - Captain's Mode: https://liquipedia.net/dota2/Game_Modes#Captains_Mode
