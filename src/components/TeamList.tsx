@@ -106,7 +106,7 @@ export function TeamList({ teams, onEdit, onDelete, onToggleFavorite, expandedTe
                       ? 'text-yellow-400 hover:text-yellow-300'
                       : 'text-dota-text-muted hover:text-yellow-400'
                   }`}
-                  title={team.favorite ? 'Remove from favorites' : 'Add to favorites'}
+                  title={team.favorite ? 'Unset as your team' : 'Set as your team'}
                 >
                   <Star size={18} fill={team.favorite ? 'currentColor' : 'none'} />
                 </button>

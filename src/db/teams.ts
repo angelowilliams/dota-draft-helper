@@ -43,10 +43,24 @@ export async function getTeamByName(name: string): Promise<Team | undefined> {
 export async function toggleFavorite(id: string): Promise<void> {
   const team = await db.teams.get(id);
   if (!team) return;
-  await db.teams.update(id, {
-    favorite: team.favorite ? undefined : 1,
-    lastUpdated: new Date(),
+
+  const newFavorite = team.favorite ? undefined : 1;
+
+  await db.transaction('rw', db.teams, async () => {
+    if (newFavorite) {
+      // Unfavorite all other teams first (limit to 1 favorite)
+      await db.teams.where('favorite').equals(1).modify({ favorite: undefined });
+    }
+    await db.teams.update(id, {
+      favorite: newFavorite,
+      lastUpdated: new Date(),
+    });
   });
+}
+
+export async function getFavoriteTeam(): Promise<Team | null> {
+  const team = await db.teams.where('favorite').equals(1).first();
+  return team ?? null;
 }
 
 export async function updateManualHeroLists(id: string, manualHeroLists: number[][]): Promise<void> {

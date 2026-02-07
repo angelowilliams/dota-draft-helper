@@ -31,10 +31,9 @@ const TIME_WINDOW_OPTIONS: { value: TimeWindowFilter; label: string }[] = [
 
 interface PlayerScoutingViewProps {
   team: Team;
-  onBack: () => void;
 }
 
-export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
+export function PlayerScoutingView({ team }: PlayerScoutingViewProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [lobbyTypeFilter, setLobbyTypeFilter] = useState<LobbyTypeFilter>('all');
   const [timeWindowFilter, setTimeWindowFilter] = useState<TimeWindowFilter>('threeMonths');
@@ -69,9 +68,6 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
     return (
       <div className="card bg-dire bg-opacity-20 border-dire">
         <p className="text-dire">Invalid team data. Please select a valid team.</p>
-        <button onClick={onBack} className="btn-primary mt-4">
-          Back to Teams
-        </button>
       </div>
     );
   }
@@ -94,15 +90,7 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <button
-            onClick={onBack}
-            className="text-dota-text-secondary hover:text-dota-text-primary mb-2 text-sm"
-          >
-            ← Back to Team Selection
-          </button>
-          <h2 className="text-2xl font-bold">{team.name}</h2>
-        </div>
+        <div />
         <button
           onClick={handleRefresh}
           disabled={loading}

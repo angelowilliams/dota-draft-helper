@@ -6,7 +6,6 @@ import { ScoutingView } from './components/ScoutingView';
 import { DraftAssistantView } from './components/DraftAssistantView';
 import { DataManagementView } from './components/DataManagementView';
 import { DraftProvider } from './contexts/DraftContext';
-import type { Team } from './types';
 
 function App() {
   const [view, setView] = useState<'teams' | 'scouting' | 'draft' | 'data'>('teams');
@@ -19,9 +18,6 @@ function App() {
       });
     }
   }, []);
-
-  // Scouting state
-  const [selectedScoutingTeam, setSelectedScoutingTeam] = useState<Team | null>(null);
 
   return (
     <DraftProvider>
@@ -89,12 +85,7 @@ function App() {
         <main className="container mx-auto px-4 py-8">
           <ErrorBoundary>
             {view === 'teams' && <TeamsView />}
-            {view === 'scouting' && (
-              <ScoutingView
-                selectedTeam={selectedScoutingTeam}
-                onSelectTeam={setSelectedScoutingTeam}
-              />
-            )}
+            {view === 'scouting' && <ScoutingView />}
             {view === 'draft' && <DraftAssistantView />}
             {view === 'data' && <DataManagementView />}
           </ErrorBoundary>
