@@ -72,18 +72,19 @@ This enables instant filter switching without re-fetching.
 
 ## GitHub Workflow
 
-Two GitHub accounts are configured. **Never mix them up.** Both authenticate via classic GitHub Personal Access Tokens stored in `.env`.
+Three GitHub accounts are used. **Never mix them up.**
 
 | Account | Purpose | Auth |
 |---------|---------|------|
-| `tinker17` | Dev work: coding, commits, PRs, merging, issues, pushes | Classic PAT via `TINKER_GITHUB_TOKEN` in `.env` (default `gh` auth) |
-| `oracle16117` | PR reviews, approvals, and comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
+| `angelowilliams` | Git operations (commits, pushes) | Default `gh` auth (keyring) |
+| `tinker17` | PR descriptions, CR replies, issue comments | Classic PAT via `TINKER_GITHUB_TOKEN` in `.env` |
+| `oracle16117` | PR reviews, approvals, and review comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
 
-**Default behavior**: All `gh` commands run as `tinker17` via default `gh` auth (backed by `TINKER_GITHUB_TOKEN`). Do not set `GH_TOKEN` for Tinker commands.
+**Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN` for git operations (push, pull, clone).
 
-**Tinker personality**: When writing PR descriptions and replying to CR comments, use `.claude/tinker-voicelines.md` for voice lines. Pick lines that fit the context.
+**Tinker commands**: For PR descriptions, CR replies, and issue comments, prefix with `GH_TOKEN=<TINKER_GITHUB_TOKEN>`. Use `.claude/tinker-voicelines.md` for voice lines — pick lines that fit the context.
 
-**PR reviews and approvals**: Always use Oracle for reviewing, approving, or commenting on PRs. Read `ORACLE_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
+**Oracle commands**: For reviewing, approving, or commenting on PRs, prefix with `GH_TOKEN=<ORACLE_GITHUB_TOKEN>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
 
 **Responding to CR feedback**: Make the fixes, commit them, then reply to each review comment with a short description and the commit SHA (e.g. `Fixed in abc1234.`). To reply to an inline review comment use `gh api repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies -f body="..."`. The PR number is required in the path — omitting it causes a 404.
 
@@ -178,7 +179,7 @@ git remote prune origin
 - Use Steam64 directly in API calls
 - Assume Radiant = First Pick
 - Commit .env file
-- Use `ORACLE_GITHUB_TOKEN` unless explicitly asked to review as Oracle
+- Use `ORACLE_GITHUB_TOKEN` for non-review commands
 - Amend commits or force-push. Make new commits and push normally.
 - Add "Generated with Claude Code" or similar branding to commits, PRs, or comments
 
