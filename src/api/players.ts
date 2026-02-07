@@ -54,12 +54,19 @@ interface OpenDotaMatchResponse {
   game_mode: number;
 }
 
+interface FetchPlayerMatchesOptions {
+  /** If set, stop fetching once we hit matches at or before this unix timestamp. */
+  latestMatchTime?: number;
+}
+
 /**
  * Fetches up to MAX_MATCHES (500) games from the past year for a player.
- * Uses offset-based pagination.
+ * Uses offset-based pagination. When latestMatchTime is provided, stops
+ * early once it reaches matches already stored locally.
  */
 export async function fetchPlayerMatches(
-  steamId: string
+  steamId: string,
+  options?: FetchPlayerMatchesOptions
 ): Promise<FetchPlayerMatchesResult> {
   const steam32Id = String(normalizeToSteam32(steamId));
 
@@ -87,6 +94,12 @@ export async function fetchPlayerMatches(
 
       for (const match of matches) {
         if (allMatches.length >= MAX_MATCHES) break;
+
+        // Stop if we've reached matches we already have
+        if (options?.latestMatchTime && match.start_time <= options.latestMatchTime) {
+          hasMore = false;
+          break;
+        }
 
         // Filter out invalid game modes (Turbo etc.)
         if (!VALID_GAME_MODES.includes(match.game_mode)) continue;

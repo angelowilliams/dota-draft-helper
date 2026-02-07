@@ -3,8 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import {
   getMultiplePlayerMatches,
   savePlayers,
+  savePlayerMatches,
   getPlayer,
-  bulkReplaceAllPlayerMatches,
+  getLatestMatchTime,
 } from '@/db/players';
 import { fetchPlayerMatches } from '@/api/players';
 import type { HeroStats, Player, LobbyTypeFilter, TimeWindowFilter, PlayerMatch } from '@/types';
@@ -30,6 +31,7 @@ interface UsePlayerDataResult {
   loading: boolean;
   loadingProgress: LoadingProgress | null;
   error: string | null;
+  lastFetched: Date | null;
   refetch: () => Promise<void>;
 }
 
@@ -141,12 +143,8 @@ export function usePlayerData({
     setLoadingProgress({ current: 0, total: steamIds.length, currentPlayer: null });
 
     try {
-      // Fetch all players first, then write to DB in a single transaction.
-      // This avoids a race condition where rapid sequential DB writes cause
-      // useLiveQuery to re-run with incomplete subscription tracking,
-      // resulting in some players' data appearing to disappear.
       const playersToSave: Player[] = [];
-      const fetchedMatchesBySteamId = new Map<string, PlayerMatch[]>();
+      const allNewMatches: PlayerMatch[] = [];
 
       for (let i = 0; i < steamIds.length; i++) {
         const steamId = steamIds[i];
@@ -157,10 +155,19 @@ export function usePlayerData({
             throw new Error('Invalid Steam ID');
           }
 
-          const { player, matches, totalFetched } = await fetchPlayerMatches(steamId);
-          console.log(`Fetched ${totalFetched} matches for ${steamId}`);
+          // Check for existing data to enable incremental fetch
+          const latestMatchTime = await getLatestMatchTime(steamId) ?? undefined;
 
-          fetchedMatchesBySteamId.set(steamId, matches);
+          const { player, matches, totalFetched } = await fetchPlayerMatches(
+            steamId,
+            latestMatchTime ? { latestMatchTime } : undefined,
+          );
+          console.log(
+            `Fetched ${totalFetched} new matches for ${steamId}` +
+            (latestMatchTime ? ` (incremental since ${new Date(latestMatchTime * 1000).toLocaleDateString()})` : ' (full)')
+          );
+
+          allNewMatches.push(...matches);
 
           if (player?.profile) {
             const playerName =
@@ -176,16 +183,14 @@ export function usePlayerData({
           }
         } catch (error) {
           console.error(`Failed to fetch data for ${steamId}:`, error);
-          // Continue with other players even if one fails
-          // Old data is preserved since we only replace successfully fetched players
         }
       }
 
       setLoadingProgress({ current: steamIds.length, total: steamIds.length, currentPlayer: null });
 
-      // Write all fetched matches to DB in a single transaction
-      if (fetchedMatchesBySteamId.size > 0) {
-        await bulkReplaceAllPlayerMatches(fetchedMatchesBySteamId);
+      // Merge new matches into DB (bulkPut upserts by [steamId+matchId] key)
+      if (allNewMatches.length > 0) {
+        await savePlayerMatches(allNewMatches);
       }
 
       if (playersToSave.length > 0) {
@@ -201,12 +206,25 @@ export function usePlayerData({
     }
   };
 
+  // Derive last fetched time from the most recent player lastUpdated
+  const lastFetched = useMemo(() => {
+    if (!cachedPlayers || cachedPlayers.size === 0) return null;
+    let latest: Date | null = null;
+    for (const player of cachedPlayers.values()) {
+      if (player.lastUpdated && (!latest || player.lastUpdated > latest)) {
+        latest = player.lastUpdated;
+      }
+    }
+    return latest;
+  }, [cachedPlayers]);
+
   return {
     heroStatsMap,
     players: cachedPlayers || new Map(),
     loading: loading || dbLoading,
     loadingProgress,
     error,
+    lastFetched,
     refetch,
   };
 }

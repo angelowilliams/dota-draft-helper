@@ -1,12 +1,29 @@
-import { useState, useEffect } from 'react';
-import { PlayerScoutingView } from './PlayerScoutingView';
+import { useState, useEffect, useRef } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { PlayerScoutingView, type PlayerScoutingControls } from './PlayerScoutingView';
 import { useTeams } from '@/hooks/useTeams';
 import { getFavoriteTeam } from '@/db/teams';
+
+function formatDate(date: Date): string {
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const y = String(date.getFullYear()).slice(-2);
+  return `${m}/${d}/${y}`;
+}
 
 export function ScoutingView() {
   const { teams, loading } = useTeams();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+
+  // Controls from PlayerScoutingView
+  const controlsRef = useRef<PlayerScoutingControls>({
+    refresh: () => {},
+    loading: false,
+    loadingProgress: null,
+    lastFetched: null,
+  });
+  const [, forceUpdate] = useState(0);
 
   // On mount, auto-select the favorite team
   useEffect(() => {
@@ -32,6 +49,7 @@ export function ScoutingView() {
   }, [teams, selectedTeamId, initialized, loading]);
 
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
+  const { loading: refreshLoading, loadingProgress, lastFetched } = controlsRef.current;
 
   if (loading) {
     return (
@@ -57,23 +75,51 @@ export function ScoutingView() {
 
   return (
     <div className="space-y-6">
-      {/* Header with team selector */}
-      <div className="flex items-center gap-4">
-        <h2 className="text-2xl font-bold">Player Scouting</h2>
-        <select
-          value={selectedTeamId ?? ''}
-          onChange={(e) => setSelectedTeamId(e.target.value || null)}
-          className="input-field"
-        >
-          {teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}{team.favorite ? ' ★' : ''}
-            </option>
-          ))}
-        </select>
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-baseline gap-6">
+          <h2 className="text-2xl font-bold">Player Scouting</h2>
+          <select
+            value={selectedTeamId ?? ''}
+            onChange={(e) => setSelectedTeamId(e.target.value || null)}
+            className="input-field py-1 text-sm"
+          >
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}{team.favorite ? ' ★' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {lastFetched && (
+            <span className="text-xs text-dota-text-muted">
+              Last updated {formatDate(lastFetched)}
+            </span>
+          )}
+          <button
+            onClick={() => controlsRef.current.refresh()}
+            disabled={refreshLoading}
+            className="btn-radiant flex items-center gap-2"
+          >
+            <RefreshCw size={16} className={refreshLoading ? 'animate-spin' : ''} />
+            {refreshLoading
+              ? loadingProgress
+                ? `Fetching ${loadingProgress.current + 1}/${loadingProgress.total}...`
+                : 'Fetching...'
+              : 'Refresh Data for Selected Team'}
+          </button>
+        </div>
       </div>
 
-      {selectedTeam && <PlayerScoutingView team={selectedTeam} />}
+      {selectedTeam && (
+        <PlayerScoutingView
+          team={selectedTeam}
+          controlsRef={controlsRef}
+          onControlsChange={() => forceUpdate((n) => n + 1)}
+        />
+      )}
     </div>
   );
 }
