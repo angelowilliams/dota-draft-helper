@@ -118,45 +118,54 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
       </div>
 
       {/* Filters */}
-      <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Time Window Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Time Period
-            </label>
-            <select
-              value={timeWindowFilter}
-              onChange={(e) => setTimeWindowFilter(e.target.value as TimeWindowFilter)}
-              className="input-field w-full"
-            >
-              {TIME_WINDOW_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-dota-text-muted mt-1">
-              Up to 500 games per player
-            </p>
+      <div className="card !p-6">
+        <h3 className="text-sm font-semibold text-dota-text-secondary uppercase tracking-wider mb-4">
+          Filters
+        </h3>
+        <div className="flex flex-col md:flex-row md:items-start gap-6">
+          {/* Left group: Time Period + Game Type */}
+          <div className="flex flex-col sm:flex-row gap-6">
+            {/* Time Window Filter */}
+            <div className="w-36">
+              <label className="block text-sm font-medium mb-2.5">
+                Time Period
+              </label>
+              <select
+                value={timeWindowFilter}
+                onChange={(e) => setTimeWindowFilter(e.target.value as TimeWindowFilter)}
+                className="input-field w-full"
+              >
+                {TIME_WINDOW_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-dota-text-muted mt-2">
+                Up to 500 games
+              </p>
+            </div>
+
+            {/* Lobby Type Filter */}
+            <div>
+              <label className="block text-sm font-medium mb-2.5">
+                Game Type
+              </label>
+              <LobbyTypeToggle value={lobbyTypeFilter} onChange={setLobbyTypeFilter} />
+              <p className="text-xs text-dota-text-muted mt-2">
+                {lobbyTypeFilter === 'competitive'
+                  ? 'Practice lobbies + tournament only'
+                  : 'All types (excludes Turbo)'}
+              </p>
+            </div>
           </div>
 
-          {/* Lobby Type Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Game Type
-            </label>
-            <LobbyTypeToggle value={lobbyTypeFilter} onChange={setLobbyTypeFilter} />
-            <p className="text-xs text-dota-text-muted mt-1">
-              {lobbyTypeFilter === 'competitive'
-                ? 'Practice lobbies + tournament only'
-                : 'All types (excludes Turbo)'}
-            </p>
-          </div>
+          {/* Spacer */}
+          <div className="hidden md:block flex-1" />
 
-          {/* Search Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+          {/* Search Filter - right aligned */}
+          <div className="w-full sm:w-64">
+            <label className="block text-sm font-medium mb-2.5 flex items-center gap-2">
               <Search size={16} />
               Search Hero
             </label>
@@ -167,7 +176,7 @@ export function PlayerScoutingView({ team, onBack }: PlayerScoutingViewProps) {
               placeholder="Filter by hero name..."
               className="input-field w-full"
             />
-            <p className="text-xs text-dota-text-muted mt-1">
+            <p className="text-xs text-dota-text-muted mt-2">
               {searchFilter && `Filtering heroes matching "${searchFilter}"`}
             </p>
           </div>

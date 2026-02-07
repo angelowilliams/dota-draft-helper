@@ -4,6 +4,8 @@
 
 Local-only Dota 2 draft helper. React 18 + TypeScript + Vite + Tailwind CSS + IndexedDB (Dexie.js) + OpenDota REST API.
 
+**Writing style:** Short and plain. Don't perform a tone — no "That's the point", no trying to sound casual or punchy. Just say what's true in as few words as possible. This applies to code comments, commit messages, PR descriptions, review comments, and user-facing text.
+
 ## Architecture
 
 ```
@@ -68,6 +70,19 @@ This enables instant filter switching without re-fetching.
 
 **Critical:** First Pick ≠ Radiant. Use `team: 'firstPick' | 'secondPick'` from draftOrder.
 
+## GitHub Workflow
+
+Two GitHub accounts are configured. **Never mix them up.**
+
+| Account | Purpose | Auth |
+|---------|---------|------|
+| `angelowilliams` (main) | Commits, PRs, issues, pushes | Default `gh` auth |
+| `tinker17` (bot) | Code review comments only | `BOT_GITHUB_TOKEN` in `.env` |
+
+**Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN`.
+
+**Code review as tinker17**: When the user asks you to review a PR as tinker17, read `BOT_GITHUB_TOKEN` from `.env` and prefix your `gh` commands with `GH_TOKEN=<token>`. Follow the instructions in `.claude/review-prompt.md` for review focus, format, and personality. Only do this when explicitly asked to review as tinker17.
+
 ## Common Tasks
 
 **Add feature:**
@@ -100,6 +115,9 @@ This enables instant filter switching without re-fetching.
 - Use Steam64 directly in API calls
 - Assume Radiant = First Pick
 - Commit .env file
+- Use `BOT_GITHUB_TOKEN` unless explicitly asked to review as tinker17
+- Amend commits or force-push. Make new commits and push normally.
+- Add "Generated with Claude Code" or similar branding to commits, PRs, or comments
 
 ## Debugging
 
