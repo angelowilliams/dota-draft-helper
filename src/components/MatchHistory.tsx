@@ -18,6 +18,7 @@ export function MatchHistory({ teamId, teamName, playerIds, heroes }: MatchHisto
   const [error, setError] = useState<string | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
 
+
   const playerIdsKey = playerIds.join(',');
 
   useEffect(() => {

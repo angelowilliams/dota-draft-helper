@@ -64,7 +64,7 @@ async function fetchMatchDetail(matchId: number): Promise<OpenDotaMatchDetailRes
 /**
  * Parse an OpenDota match detail response into our Match type.
  */
-function parseMatchDetail(detail: OpenDotaMatchDetailResponse): Match {
+export function parseMatchDetail(detail: OpenDotaMatchDetailResponse): Match {
   const radiantBans: number[] = [];
   const radiantPicks: number[] = [];
   const direBans: number[] = [];
@@ -122,7 +122,7 @@ function parseMatchDetail(detail: OpenDotaMatchDetailResponse): Match {
  * Returns match IDs where 3+ team players participated in the same
  * competitive match (lobbyType 1 or 2), sorted by most recent first.
  */
-async function findCompetitiveMatchIdsFromPlayers(
+export async function findCompetitiveMatchIdsFromPlayers(
   playerIds: string[],
   limit: number
 ): Promise<string[]> {
