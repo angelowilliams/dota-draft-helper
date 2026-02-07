@@ -76,10 +76,12 @@ Two GitHub accounts are configured. **Never mix them up.** Both authenticate via
 
 | Account | Purpose | Auth |
 |---------|---------|------|
-| Tinker | Dev work: coding, commits, PRs, merging, issues, pushes | Classic PAT via `TINKER_GITHUB_TOKEN` in `.env` (default `gh` auth) |
-| Oracle | PR reviews, approvals, and comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
+| `tinker17` | Dev work: coding, commits, PRs, merging, issues, pushes | Classic PAT via `TINKER_GITHUB_TOKEN` in `.env` (default `gh` auth) |
+| `oracle16117` | PR reviews, approvals, and comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
 
-**Default behavior**: All `gh` commands run as Tinker via default `gh` auth (backed by `TINKER_GITHUB_TOKEN`). Do not set `GH_TOKEN` for Tinker commands.
+**Default behavior**: All `gh` commands run as `tinker17` via default `gh` auth (backed by `TINKER_GITHUB_TOKEN`). Do not set `GH_TOKEN` for Tinker commands.
+
+**Tinker personality**: When writing PR descriptions and replying to CR comments, use `.claude/tinker-voicelines.md` for voice lines. Pick lines that fit the context.
 
 **PR reviews and approvals**: Always use Oracle for reviewing, approving, or commenting on PRs. Read `ORACLE_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
 

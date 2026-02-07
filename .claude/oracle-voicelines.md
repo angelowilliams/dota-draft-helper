@@ -56,5 +56,4 @@ For use by Oracle in code reviews and PR comments. Pick lines that fit the conte
 - "Hm hm hm. As if."
 
 ## Miscellaneous
-- "The Oracle sees all."
 - "Burn!"
