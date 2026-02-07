@@ -76,12 +76,12 @@ Two GitHub accounts are configured. **Never mix them up.**
 
 | Account | Purpose | Auth |
 |---------|---------|------|
-| `angelowilliams` (main) | Commits, PRs, issues, pushes | Default `gh` auth |
-| `tinker17` (bot) | PR reviews, approvals, and comments | Classic PAT via `BOT_GITHUB_TOKEN` in `.env` |
+| `tinker17` (main) | Coding, commits, PRs, merging, issues, pushes | Default `gh` auth |
+| `Oracle` (reviewer) | PR reviews, approvals, and comments | Classic PAT via `ORACLE_GITHUB_TOKEN` in `.env` |
 
-**Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN`.
+**Default behavior**: All `gh` commands run as `tinker17` via default `gh auth`. Do not set `GH_TOKEN`.
 
-**PR reviews and approvals**: Always use tinker17 for reviewing, approving, or commenting on PRs. Read `BOT_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
+**PR reviews and approvals**: Always use Oracle for reviewing, approving, or commenting on PRs. Read `ORACLE_GITHUB_TOKEN` from `.env` and prefix `gh` commands with `GH_TOKEN=<token>`. Follow `.claude/review-prompt.md` for review focus, format, and personality. This includes `gh pr review`, `gh pr comment`, and any `gh api` calls that post review comments.
 
 **Responding to CR feedback**: Make the fixes, commit them, then reply to each review comment with a short description and the commit SHA (e.g. `Fixed in abc1234.`).
 
@@ -173,7 +173,7 @@ git remote prune origin
 - Use Steam64 directly in API calls
 - Assume Radiant = First Pick
 - Commit .env file
-- Use `BOT_GITHUB_TOKEN` unless explicitly asked to review as tinker17
+- Use `ORACLE_GITHUB_TOKEN` unless explicitly asked to review as Oracle
 - Amend commits or force-push. Make new commits and push normally.
 - Add "Generated with Claude Code" or similar branding to commits, PRs, or comments
 
