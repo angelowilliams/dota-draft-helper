@@ -64,7 +64,7 @@ async function fetchMatchDetail(matchId: number): Promise<OpenDotaMatchDetailRes
 /**
  * Parse an OpenDota match detail response into our Match type.
  */
-function parseMatchDetail(detail: OpenDotaMatchDetailResponse): Match {
+export function parseMatchDetail(detail: OpenDotaMatchDetailResponse): Match {
   const radiantBans: number[] = [];
   const radiantPicks: number[] = [];
   const direBans: number[] = [];
@@ -122,7 +122,7 @@ function parseMatchDetail(detail: OpenDotaMatchDetailResponse): Match {
  * Returns match IDs where 3+ team players participated in the same
  * competitive match (lobbyType 1 or 2), sorted by most recent first.
  */
-async function findCompetitiveMatchIdsFromPlayers(
+export async function findCompetitiveMatchIdsFromPlayers(
   playerIds: string[],
   limit: number
 ): Promise<string[]> {
@@ -156,13 +156,12 @@ async function findCompetitiveMatchIdsFromPlayers(
  * Fetch match details for a list of match IDs and return parsed Match objects.
  */
 async function fetchMatchDetailsForIds(matchIds: string[]): Promise<Match[]> {
-  const matches: Match[] = [];
-  for (const matchId of matchIds) {
-    const detail = await fetchMatchDetail(Number(matchId));
-    if (!detail) continue;
-    matches.push(parseMatchDetail(detail));
-  }
-  return matches;
+  const details = await Promise.all(
+    matchIds.map((id) => fetchMatchDetail(Number(id)))
+  );
+  return details
+    .filter((d): d is OpenDotaMatchDetailResponse => d !== null)
+    .map(parseMatchDetail);
 }
 
 export async function fetchTeamMatches(
@@ -178,15 +177,12 @@ export async function fetchTeamMatches(
 
     if (teamMatches && teamMatches.length > 0) {
       const matchesToFetch = teamMatches.slice(0, limit);
-      const matches: Match[] = [];
-
-      for (const teamMatch of matchesToFetch) {
-        const detail = await fetchMatchDetail(teamMatch.match_id);
-        if (!detail) continue;
-        matches.push(parseMatchDetail(detail));
-      }
-
-      return matches;
+      const details = await Promise.all(
+        matchesToFetch.map((tm) => fetchMatchDetail(tm.match_id))
+      );
+      return details
+        .filter((d): d is OpenDotaMatchDetailResponse => d !== null)
+        .map(parseMatchDetail);
     }
 
     // Fallback: find competitive matches from cached player data
