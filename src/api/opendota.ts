@@ -24,7 +24,7 @@ export async function opendotaFetch<T = any>(endpoint: string): Promise<T> {
   }
 
   const text = await response.text();
-  if (!text) return null as T;
+  if (!text) throw new Error(`OpenDota returned empty body for ${endpoint}`);
   return JSON.parse(text);
 }
 
