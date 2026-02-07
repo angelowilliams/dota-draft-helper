@@ -81,7 +81,7 @@ Two GitHub accounts are configured. **Never mix them up.**
 
 **Default behavior**: All `gh` commands run as `angelowilliams` via default `gh auth`. Do not set `GH_TOKEN`.
 
-**Code review as tinker17**: When the user asks you to review a PR as tinker17, read `BOT_GITHUB_TOKEN` from `.env` and prefix your `gh` commands with `GH_TOKEN=<token>`. Follow the instructions in `scripts/review-prompt.md` for review focus, format, and personality. Only do this when explicitly asked to review as tinker17.
+**Code review as tinker17**: When the user asks you to review a PR as tinker17, read `BOT_GITHUB_TOKEN` from `.env` and prefix your `gh` commands with `GH_TOKEN=<token>`. Follow the instructions in `.claude/review-prompt.md` for review focus, format, and personality. Only do this when explicitly asked to review as tinker17.
 
 ## Common Tasks
 
