@@ -4,6 +4,7 @@ export interface Team {
   id: string; // UUID generated locally
   name: string;
   playerIds: string[]; // Array of 5 Steam IDs
+  altAccountMap?: Record<string, string[]>; // Main Steam ID -> alt Steam IDs
   teamId?: string; // Optional team ID for competitive tracking
   teamLogo?: string; // Team logo URL
   favorite?: number; // 1 = favorite, undefined = not

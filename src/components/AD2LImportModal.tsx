@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Download, AlertCircle, Loader2, Check } from 'lucide-react';
-import { normalizeToSteam32 } from '@/utils/steamId';
+import { parseAD2LPage } from '@/utils/ad2lParser';
 import { detectTeamsForPlayers } from '@/services/teamDetection';
 import type { CandidateTeam } from '@/services/teamDetection';
 import type { Team } from '@/types';
@@ -19,6 +19,7 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
   const [teamData, setTeamData] = useState<{
     name: string;
     playerIds: string[];
+    altAccountMap: Record<string, string[]>;
   } | null>(null);
 
   // Team detection state
@@ -54,80 +55,6 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
     };
   }, [teamData]);
 
-  const parseAD2LPage = (html: string): { name: string; playerIds: string[] } => {
-    // Create a temporary DOM element to parse HTML
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-
-    // Extract team name - look for the team header (can be h1 or h2)
-    let teamName = 'Imported Team';
-    const headings = doc.querySelectorAll('h1, h2');
-    for (const heading of headings) {
-      const text = heading.textContent?.trim();
-      if (text && text.length > 0 && !text.includes('League') && !text.includes('Season')) {
-        teamName = text;
-        break;
-      }
-    }
-
-    // Find all rosterNameContainer elements (excluding rosterNameContainer-alt)
-    const rosterContainers = doc.querySelectorAll('.rosterNameContainer:not(.rosterNameContainer-alt)');
-    const playerIds: string[] = [];
-    const seenIds = new Set<string>();
-
-    rosterContainers.forEach((container) => {
-      // Look for various links that contain Steam IDs
-      const links = container.querySelectorAll('a[href]');
-
-      for (const link of links) {
-        const href = link.getAttribute('href') || '';
-        let steamId: string | null = null;
-
-        // Check for steam://friends/add/[steamID]
-        const steamFriendMatch = href.match(/steam:\/\/friends\/add\/(\d+)/);
-        if (steamFriendMatch) {
-          steamId = steamFriendMatch[1];
-        }
-
-        // Check for Stratz URLs: https://stratz.com/players/[steamID32]
-        const stratzMatch = href.match(/stratz\.com\/players\/(\d+)/);
-        if (stratzMatch && !steamId) {
-          steamId = stratzMatch[1]; // This is Steam32, which is what we want
-        }
-
-        // Check for OpenDota URLs: https://www.opendota.com/players/[steamID32]
-        const opendotaMatch = href.match(/opendota\.com\/players\/(\d+)/);
-        if (opendotaMatch && !steamId) {
-          steamId = opendotaMatch[1]; // This is Steam32
-        }
-
-        // Check for Dotabuff URLs: https://www.dotabuff.com/players/[steamID32]
-        const dotabuffMatch = href.match(/dotabuff\.com\/players\/(\d+)/);
-        if (dotabuffMatch && !steamId) {
-          steamId = dotabuffMatch[1]; // This is Steam32
-        }
-
-        // Check for Steam Community profile: https://steamcommunity.com/profiles/[steamID64]
-        const steamProfileMatch = href.match(/steamcommunity\.com\/profiles\/(\d+)/);
-        if (steamProfileMatch && !steamId) {
-          steamId = steamProfileMatch[1]; // This is Steam64
-        }
-
-        // If we found a Steam ID, normalize to Steam32 and add if not duplicate
-        if (steamId) {
-          const steam32 = String(normalizeToSteam32(steamId));
-          if (!seenIds.has(steam32)) {
-            playerIds.push(steam32);
-            seenIds.add(steam32);
-            break; // Move to next container
-          }
-        }
-      }
-    });
-
-    return { name: teamName, playerIds };
-  };
-
   const processHtml = (html: string) => {
     const parsed = parseAD2LPage(html);
 
@@ -137,8 +64,12 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
     }
 
     if (parsed.playerIds.length > 5) {
-      // Limit to first 5 players
       parsed.playerIds = parsed.playerIds.slice(0, 5);
+      // Prune altAccountMap to only include keys in the kept playerIds
+      const kept = new Set(parsed.playerIds);
+      for (const key of Object.keys(parsed.altAccountMap)) {
+        if (!kept.has(key)) delete parsed.altAccountMap[key];
+      }
     }
 
     setTeamData(parsed);
@@ -194,10 +125,15 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
     if (!teamData) return;
 
     try {
+      const altAccountMap = Object.keys(teamData.altAccountMap).length > 0
+        ? teamData.altAccountMap
+        : undefined;
+
       await onImport({
         name: teamData.name,
         playerIds: teamData.playerIds,
         ...(selectedTeamId != null && { teamId: String(selectedTeamId) }),
+        ...(altAccountMap && { altAccountMap }),
       });
       onCancel();
     } catch (err) {
@@ -335,8 +271,15 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
                     <span className="text-sm text-dota-text-secondary block mb-1">Steam IDs:</span>
                     <div className="space-y-1">
                       {teamData.playerIds.map((id, idx) => (
-                        <div key={idx} className="text-sm font-mono">
-                          {idx + 1}. {id || <span className="text-dota-text-muted italic">Empty</span>}
+                        <div key={idx}>
+                          <div className="text-sm font-mono">
+                            {idx + 1}. {id || <span className="text-dota-text-muted italic">Empty</span>}
+                          </div>
+                          {teamData.altAccountMap[id]?.map((altId, altIdx) => (
+                            <div key={altIdx} className="text-sm font-mono text-dota-text-secondary ml-6">
+                              ↳ {altId}
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>

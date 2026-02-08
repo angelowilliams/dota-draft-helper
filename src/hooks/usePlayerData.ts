@@ -15,6 +15,7 @@ const COMPETITIVE_LOBBY_TYPES = new Set([1, 2]);
 
 interface UsePlayerDataParams {
   steamIds: string[];
+  altAccountMap?: Record<string, string[]>;
   lobbyTypeFilter?: LobbyTypeFilter;
   timeWindowFilter?: TimeWindowFilter;
 }
@@ -85,6 +86,7 @@ function aggregateMatchesToHeroStats(
 
 export function usePlayerData({
   steamIds,
+  altAccountMap,
   lobbyTypeFilter = 'all',
   timeWindowFilter = 'threeMonths',
 }: UsePlayerDataParams): UsePlayerDataResult {
@@ -92,45 +94,66 @@ export function usePlayerData({
   const [loadingProgress, setLoadingProgress] = useState<LoadingProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Collect all Steam IDs (main + alts) for fetching and caching
+  const allSteamIds = useMemo(() => {
+    if (!altAccountMap) return steamIds;
+    const all = new Set(steamIds);
+    for (const alts of Object.values(altAccountMap)) {
+      for (const alt of alts) all.add(alt);
+    }
+    return Array.from(all);
+  }, [steamIds, altAccountMap]);
+
   // Load cached matches from IndexedDB
   const cachedMatches = useLiveQuery(async () => {
-    if (steamIds.length === 0) return new Map<string, PlayerMatch[]>();
-    return await getMultiplePlayerMatches(steamIds);
-  }, [steamIds]);
+    if (allSteamIds.length === 0) return new Map<string, PlayerMatch[]>();
+    return await getMultiplePlayerMatches(allSteamIds);
+  }, [allSteamIds]);
 
   const cachedPlayers = useLiveQuery(async () => {
-    if (steamIds.length === 0) return new Map<string, Player>();
+    if (allSteamIds.length === 0) return new Map<string, Player>();
     const players = new Map<string, Player>();
-    for (const steamId of steamIds) {
+    for (const steamId of allSteamIds) {
       const player = await getPlayer(steamId);
       if (player) {
         players.set(steamId, player);
       }
     }
     return players;
-  }, [steamIds]);
+  }, [allSteamIds]);
 
   // True while useLiveQuery is resolving from IndexedDB (before first result)
   const dbLoading = steamIds.length > 0 && cachedMatches === undefined;
 
-  // Compute hero stats from cached matches, filtered by time window and lobby type
+  // Compute hero stats from cached matches, merging alt account matches into main player
   const heroStatsMap = useMemo(() => {
     const result = new Map<string, HeroStats[]>();
-
     if (!cachedMatches) return result;
 
-    for (const [steamId, matches] of cachedMatches.entries()) {
+    for (const mainId of steamIds) {
+      const allMatches: PlayerMatch[] = [];
+      const mainMatches = cachedMatches.get(mainId);
+      if (mainMatches) allMatches.push(...mainMatches);
+
+      const altIds = altAccountMap?.[mainId];
+      if (altIds) {
+        for (const altId of altIds) {
+          const altMatches = cachedMatches.get(altId);
+          if (altMatches) allMatches.push(...altMatches);
+        }
+      }
+
       const heroStats = aggregateMatchesToHeroStats(
-        matches,
-        steamId,
+        allMatches,
+        mainId,
         lobbyTypeFilter,
         timeWindowFilter
       );
-      result.set(steamId, heroStats);
+      result.set(mainId, heroStats);
     }
 
     return result;
-  }, [cachedMatches, lobbyTypeFilter, timeWindowFilter]);
+  }, [cachedMatches, steamIds, altAccountMap, lobbyTypeFilter, timeWindowFilter]);
 
   const refetch = async () => {
     if (steamIds.length === 0) {
@@ -140,22 +163,43 @@ export function usePlayerData({
 
     setLoading(true);
     setError(null);
+
+    // Build flat list of all accounts to fetch (main + alts)
+    const accountsToFetch: { steamId: string; playerIndex: number }[] = [];
+    for (let i = 0; i < steamIds.length; i++) {
+      accountsToFetch.push({ steamId: steamIds[i], playerIndex: i });
+      const altIds = altAccountMap?.[steamIds[i]];
+      if (altIds) {
+        for (const altId of altIds) {
+          accountsToFetch.push({ steamId: altId, playerIndex: i });
+        }
+      }
+    }
+
     setLoadingProgress({ current: 0, total: steamIds.length, currentPlayer: null });
 
     try {
       const playersToSave: Player[] = [];
       const allNewMatches: PlayerMatch[] = [];
+      let lastPlayerIndex = -1;
 
-      for (let i = 0; i < steamIds.length; i++) {
-        const steamId = steamIds[i];
-        setLoadingProgress({ current: i, total: steamIds.length, currentPlayer: steamId });
+      for (let i = 0; i < accountsToFetch.length; i++) {
+        const { steamId, playerIndex } = accountsToFetch[i];
+
+        if (playerIndex !== lastPlayerIndex) {
+          setLoadingProgress({
+            current: playerIndex,
+            total: steamIds.length,
+            currentPlayer: steamIds[playerIndex],
+          });
+          lastPlayerIndex = playerIndex;
+        }
 
         try {
           if (!steamId || steamId.trim().length === 0) {
             throw new Error('Invalid Steam ID');
           }
 
-          // Check for existing data to enable incremental fetch
           const latestMatchTime = await getLatestMatchTime(steamId) ?? undefined;
 
           const { player, matches, totalFetched } = await fetchPlayerMatches(
@@ -188,7 +232,6 @@ export function usePlayerData({
 
       setLoadingProgress({ current: steamIds.length, total: steamIds.length, currentPlayer: null });
 
-      // Merge new matches into DB (bulkPut upserts by [steamId+matchId] key)
       if (allNewMatches.length > 0) {
         await savePlayerMatches(allNewMatches);
       }

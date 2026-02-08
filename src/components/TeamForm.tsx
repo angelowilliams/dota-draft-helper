@@ -94,6 +94,9 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
   const [playerIds, setPlayerIds] = useState<string[]>(
     initialData?.playerIds || ['', '', '', '', '']
   );
+  const [altAccountMap, setAltAccountMap] = useState<Record<string, string[]>>(
+    initialData?.altAccountMap || {}
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -104,6 +107,36 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const addAlt = (playerIndex: number) => {
+    const mainId = playerIds[playerIndex];
+    if (!mainId.trim()) return;
+    setAltAccountMap(prev => ({
+      ...prev,
+      [mainId]: [...(prev[mainId] || []), ''],
+    }));
+  };
+
+  const updateAlt = (mainId: string, altIndex: number, value: string) => {
+    setAltAccountMap(prev => {
+      const alts = [...(prev[mainId] || [])];
+      alts[altIndex] = value;
+      return { ...prev, [mainId]: alts };
+    });
+  };
+
+  const removeAlt = (mainId: string, altIndex: number) => {
+    setAltAccountMap(prev => {
+      const alts = (prev[mainId] || []).filter((_, i) => i !== altIndex);
+      const next = { ...prev };
+      if (alts.length === 0) {
+        delete next[mainId];
+      } else {
+        next[mainId] = alts;
+      }
+      return next;
+    });
+  };
 
   // Fetch player names from IndexedDB
   const playerNames = useLiveQuery(async () => {
@@ -135,10 +168,21 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
 
     setSubmitting(true);
     try {
+      // Clean altAccountMap: trim keys and values, remove empties
+      const cleanedAltMap: Record<string, string[]> = {};
+      for (const [mainId, alts] of Object.entries(altAccountMap)) {
+        const trimmedMainId = mainId.trim();
+        const cleanedAlts = alts.map(a => a.trim()).filter(a => a.length > 0);
+        if (trimmedMainId && cleanedAlts.length > 0) {
+          cleanedAltMap[trimmedMainId] = cleanedAlts;
+        }
+      }
+
       await onSubmit({
         name: name.trim(),
         playerIds: playerIds.map(id => id.trim()),
         teamId: teamId.trim() || undefined,
+        ...(Object.keys(cleanedAltMap).length > 0 && { altAccountMap: cleanedAltMap }),
       });
       onCancel();
     } catch (error) {
@@ -150,11 +194,24 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
   };
 
   const updatePlayerId = (index: number, value: string) => {
+    const oldId = playerIds[index];
     const newPlayerIds = [...playerIds];
     newPlayerIds[index] = value;
     setPlayerIds(newPlayerIds);
 
-    // Clear error for this field
+    // Transfer alts from old ID to new ID
+    if (oldId !== value && altAccountMap[oldId]) {
+      setAltAccountMap(prev => {
+        const next = { ...prev };
+        const alts = next[oldId];
+        delete next[oldId];
+        if (value.trim() && alts) {
+          next[value] = alts;
+        }
+        return next;
+      });
+    }
+
     if (errors[`player${index}`]) {
       const newErrors = { ...errors };
       delete newErrors[`player${index}`];
@@ -253,15 +310,45 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
               >
                 <div className="space-y-2">
                   {playerIds.map((playerId, index) => (
-                    <SortablePlayerInput
-                      key={index}
-                      id={index.toString()}
-                      index={index}
-                      playerId={playerId}
-                      playerName={playerNames?.[playerId]}
-                      error={errors[`player${index}`]}
-                      onUpdate={updatePlayerId}
-                    />
+                    <div key={index}>
+                      <SortablePlayerInput
+                        id={index.toString()}
+                        index={index}
+                        playerId={playerId}
+                        playerName={playerNames?.[playerId]}
+                        error={errors[`player${index}`]}
+                        onUpdate={updatePlayerId}
+                      />
+                      {/* Alt accounts for this player */}
+                      {altAccountMap[playerId]?.map((altId, altIdx) => (
+                        <div key={altIdx} className="flex items-center gap-2 ml-8 mt-1">
+                          <span className="text-dota-text-muted text-sm">{'\u21b3'}</span>
+                          <input
+                            type="text"
+                            value={altId}
+                            onChange={(e) => updateAlt(playerId, altIdx, e.target.value)}
+                            className="input-field flex-1 text-sm"
+                            placeholder="Alt account Steam ID"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeAlt(playerId, altIdx)}
+                            className="text-dota-text-muted hover:text-dire text-sm"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      {playerId.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => addAlt(index)}
+                          className="text-xs text-dota-text-muted hover:text-dota-text-secondary ml-8 mt-1"
+                        >
+                          + Alt account
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </SortableContext>
