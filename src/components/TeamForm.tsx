@@ -168,12 +168,13 @@ export function TeamForm({ onSubmit, onCancel, initialData }: TeamFormProps) {
 
     setSubmitting(true);
     try {
-      // Clean altAccountMap: remove empty entries, trim IDs
+      // Clean altAccountMap: trim keys and values, remove empties
       const cleanedAltMap: Record<string, string[]> = {};
       for (const [mainId, alts] of Object.entries(altAccountMap)) {
+        const trimmedMainId = mainId.trim();
         const cleanedAlts = alts.map(a => a.trim()).filter(a => a.length > 0);
-        if (cleanedAlts.length > 0) {
-          cleanedAltMap[mainId] = cleanedAlts;
+        if (trimmedMainId && cleanedAlts.length > 0) {
+          cleanedAltMap[trimmedMainId] = cleanedAlts;
         }
       }
 
