@@ -64,8 +64,12 @@ export function AD2LImportModal({ onImport, onCancel }: AD2LImportModalProps) {
     }
 
     if (parsed.playerIds.length > 5) {
-      // Limit to first 5 players
       parsed.playerIds = parsed.playerIds.slice(0, 5);
+      // Prune altAccountMap to only include keys in the kept playerIds
+      const kept = new Set(parsed.playerIds);
+      for (const key of Object.keys(parsed.altAccountMap)) {
+        if (!kept.has(key)) delete parsed.altAccountMap[key];
+      }
     }
 
     setTeamData(parsed);
