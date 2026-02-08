@@ -90,14 +90,16 @@ export function parseAD2LPage(html: string): {
     '.rosterNameContainer:not(.rosterNameContainer-alt)',
   )
 
-  const allIds = new Set<string>()
+  const playerIds: string[] = []
+  const seenIds = new Set<string>()
   const altAccountMap: Record<string, string[]> = {}
 
   for (const mainContainer of mainContainers) {
     const mainId = extractSteamIdFromContainer(mainContainer)
-    if (!mainId) continue
+    if (!mainId || seenIds.has(mainId)) continue
 
-    allIds.add(mainId)
+    playerIds.push(mainId)
+    seenIds.add(mainId)
 
     // Alt containers become siblings due to HTML parsing (li cannot nest in li).
     // Walk following siblings until we hit a non-alt rosterNameContainer or run out.
@@ -105,9 +107,9 @@ export function parseAD2LPage(html: string): {
     let sibling = mainContainer.nextElementSibling
     while (sibling?.classList.contains('rosterNameContainer-alt')) {
       const altId = extractSteamIdFromContainer(sibling)
-      if (altId && !allIds.has(altId)) {
+      if (altId && !seenIds.has(altId)) {
         altIds.push(altId)
-        allIds.add(altId)
+        seenIds.add(altId)
       }
       sibling = sibling.nextElementSibling
     }
@@ -119,7 +121,7 @@ export function parseAD2LPage(html: string): {
 
   return {
     name,
-    playerIds: Array.from(allIds),
+    playerIds,
     altAccountMap,
   }
 }

@@ -108,16 +108,16 @@ describe('parseAD2LPage', () => {
     const html = makePage(makePlayer('100', ['101']))
     const result = parseAD2LPage(html)
     expect(result.altAccountMap).toEqual({ '100': ['101'] })
-    // alt ID should also be in playerIds
-    expect(result.playerIds).toContain('101')
+    // alt IDs should NOT be in playerIds (only main accounts)
+    expect(result.playerIds).not.toContain('101')
+    expect(result.playerIds).toEqual(['100'])
   })
 
   it('supports multiple alts per player', () => {
     const html = makePage(makePlayer('100', ['101', '102']))
     const result = parseAD2LPage(html)
     expect(result.altAccountMap).toEqual({ '100': ['101', '102'] })
-    expect(result.playerIds).toContain('101')
-    expect(result.playerIds).toContain('102')
+    expect(result.playerIds).toEqual(['100'])
   })
 
   it('returns empty altAccountMap when no alts exist', () => {
@@ -127,11 +127,12 @@ describe('parseAD2LPage', () => {
   })
 
   it('deduplicates IDs across main and alt', () => {
-    // alt ID same as another main ID
+    // '200' appears as alt of '100' AND as a main player — should only appear once total
     const html = makePage(makePlayer('100', ['200']) + makePlayer('200'))
     const result = parseAD2LPage(html)
-    const idCount = result.playerIds.filter((id) => id === '200').length
-    expect(idCount).toBe(1)
+    // '200' was seen as alt first, so it's in altAccountMap but not in playerIds
+    expect(result.playerIds).toEqual(['100'])
+    expect(result.altAccountMap).toEqual({ '100': ['200'] })
   })
 
   it('excludes headings containing League or Season from team name', () => {
