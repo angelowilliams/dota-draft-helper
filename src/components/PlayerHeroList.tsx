@@ -12,6 +12,7 @@ interface PlayerHeroListProps {
   heroStats: HeroStats[];
   heroes: Hero[];
   searchFilter?: string;
+  altCount?: number;
 }
 
 export function PlayerHeroList({
@@ -21,6 +22,7 @@ export function PlayerHeroList({
   heroStats,
   heroes,
   searchFilter = '',
+  altCount,
 }: PlayerHeroListProps) {
   const {
     attributes,
@@ -85,6 +87,11 @@ export function PlayerHeroList({
           >
             {player?.name || `Player ${steamId.slice(-4)}`}
           </a>
+          {altCount ? (
+            <span className="text-xs text-dota-text-muted font-normal">
+              +{altCount} alt{altCount > 1 ? 's' : ''}
+            </span>
+          ) : null}
         </h3>
       </div>
 
