@@ -83,6 +83,7 @@ export function PlayerScoutingView({ team, controlsRef, onControlsChange }: Play
 
   const { heroStatsMap, players, loading, loadingProgress, error, lastFetched, refetch } = usePlayerData({
     steamIds: team.playerIds,
+    altAccountMap: team.altAccountMap,
     lobbyTypeFilter,
     timeWindowFilter,
   });
